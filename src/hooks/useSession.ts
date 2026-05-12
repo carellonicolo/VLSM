@@ -14,7 +14,8 @@ import {
   type Phase,
 } from '../lib/storage';
 
-const DURATA_DEFAULT_MIN = Number(import.meta.env.VITE_DURATA_DEFAULT_MIN ?? '60');
+const RAW_DURATA = Number(import.meta.env.VITE_DURATA_DEFAULT_MIN ?? '0');
+const DURATA_DEFAULT_MIN = Number.isFinite(RAW_DURATA) && RAW_DURATA > 0 ? RAW_DURATA : 60;
 
 const INITIAL: PersistedSession = {
   version: 1,

@@ -7,18 +7,21 @@ interface Props {
   onStart: (studente: DatiStudente, verificaId: VerificaId, durataMin: number) => void;
 }
 
+const RAW_DURATA = Number(import.meta.env.VITE_DURATA_DEFAULT_MIN ?? '0');
+const DURATA_BLOCCATA = Number.isFinite(RAW_DURATA) && RAW_DURATA > 0 ? RAW_DURATA : null;
+
 export function StudentInfoScreen({ durataMin, onStart }: Props) {
   const [nome, setNome] = useState('');
   const [classe, setClasse] = useState('');
-  const [durata, setDurata] = useState(durataMin);
+  const [durata, setDurata] = useState(DURATA_BLOCCATA ?? durataMin);
 
-  const valid = nome.trim().length >= 2 && classe.trim().length >= 1;
+  const valid = nome.trim().length >= 2 && classe.trim().length >= 1 && durata > 0;
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!valid) return;
     const verificaId = pickVerifica();
-    onStart({ nome: nome.trim(), classe: classe.trim() }, verificaId, durata);
+    onStart({ nome: nome.trim(), classe: classe.trim() }, verificaId, DURATA_BLOCCATA ?? durata);
   };
 
   return (
@@ -38,14 +41,19 @@ export function StudentInfoScreen({ durataMin, onStart }: Props) {
         </div>
       </div>
       <div className="field">
-        <label htmlFor="durata">Durata (minuti)</label>
+        <label htmlFor="durata">
+          Durata (minuti)
+          {DURATA_BLOCCATA !== null && <span className="muted" style={{ marginLeft: '0.5rem', fontWeight: 400 }}>— impostata dal docente</span>}
+        </label>
         <input
           id="durata"
           type="number"
           min={5}
           max={180}
-          value={durata}
+          value={DURATA_BLOCCATA ?? durata}
           onChange={(e) => setDurata(Number(e.target.value))}
+          readOnly={DURATA_BLOCCATA !== null}
+          disabled={DURATA_BLOCCATA !== null}
         />
       </div>
       <button className="btn" type="submit" disabled={!valid} style={{ width: '100%' }}>

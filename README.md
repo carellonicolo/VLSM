@@ -35,6 +35,10 @@ VITE_APP_PASSWORD=vlsm2026
 VITE_DURATA_DEFAULT_MIN=60
 ```
 
+**Comportamento del campo durata:**
+- `VITE_DURATA_DEFAULT_MIN=0` (o non impostata) → lo studente può scegliere liberamente la durata prima di iniziare (default mostrato: 60 min).
+- `VITE_DURATA_DEFAULT_MIN=N` con `N>0` → il campo durata è visibile ma **bloccato** sul valore `N`. Lo studente non può modificarlo. Per cambiarlo: aggiorni la env var su Cloudflare e fai un nuovo deploy.
+
 > **Attenzione**: la password viene inlined nel bundle JS a build-time. È una barriera "soft", non sicurezza reale.
 
 ## Deploy su Cloudflare Pages
