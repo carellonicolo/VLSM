@@ -1,21 +1,25 @@
 import { useState } from 'react';
-import type { DatiStudente, Difficolta, VerificaId } from '../../types/domain';
+import type { Categoria, DatiStudente, Difficolta, VerificaId } from '../../types/domain';
 import { DIFFICOLTA_ORDER } from '../../types/domain';
 import { pickVerifica } from '../../lib/pickVerifica';
 import { verificheByDifficolta } from '../../data/verifiche';
 
 interface Props {
   durataMin: number;
+  categoria: Categoria;
   onStart: (studente: DatiStudente, verificaId: VerificaId, durataMin: number) => void;
 }
 
 const RAW_DURATA = Number(import.meta.env.VITE_DURATA_DEFAULT_MIN ?? '0');
-const DURATA_BLOCCATA = Number.isFinite(RAW_DURATA) && RAW_DURATA > 0 ? RAW_DURATA : null;
+const DURATA_BLOCCATA_VERIFICA = Number.isFinite(RAW_DURATA) && RAW_DURATA > 0 ? RAW_DURATA : null;
 
-export function StudentInfoScreen({ durataMin, onStart }: Props) {
+export function StudentInfoScreen({ durataMin, categoria, onStart }: Props) {
+  const isEsercitazione = categoria === 'esercitazione';
+  const durataBloccata = isEsercitazione ? null : DURATA_BLOCCATA_VERIFICA;
+
   const [nome, setNome] = useState('');
   const [classe, setClasse] = useState('');
-  const [durata, setDurata] = useState(DURATA_BLOCCATA ?? durataMin);
+  const [durata, setDurata] = useState(durataBloccata ?? durataMin);
   const [difficolta, setDifficolta] = useState<Difficolta>('Base');
 
   const valid = nome.trim().length >= 2 && classe.trim().length >= 1 && durata > 0;
@@ -23,15 +27,19 @@ export function StudentInfoScreen({ durataMin, onStart }: Props) {
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!valid) return;
-    const verificaId = pickVerifica(difficolta);
-    onStart({ nome: nome.trim(), classe: classe.trim() }, verificaId, DURATA_BLOCCATA ?? durata);
+    const verificaId = pickVerifica(difficolta, categoria);
+    onStart({ nome: nome.trim(), classe: classe.trim() }, verificaId, durataBloccata ?? durata);
   };
 
   return (
     <form className="card" onSubmit={submit} style={{ maxWidth: 560, margin: '2rem auto' }}>
-      <h2 style={{ marginTop: 0 }}>Dati studente</h2>
+      <h2 style={{ marginTop: 0 }}>
+        {isEsercitazione ? '🎯 Esercitazione libera' : 'Dati studente'}
+      </h2>
       <p className="muted">
-        Inserisci nome, classe e durata. All'avvio verrà sorteggiata casualmente una delle 6 verifiche disponibili.
+        {isEsercitazione
+          ? 'Inserisci i tuoi dati e scegli il livello. Verrà sorteggiata una simulazione tra quelle disponibili per quel livello. Le simulazioni non valgono come verifica ufficiale.'
+          : 'Inserisci nome, classe e durata. All\'avvio verrà sorteggiata casualmente una delle verifiche disponibili.'}
       </p>
       <div className="field-row">
         <div className="field">
@@ -53,10 +61,11 @@ export function StudentInfoScreen({ durataMin, onStart }: Props) {
             style={{ width: '100%', padding: '0.5rem 0.7rem', border: '1px solid var(--border)', borderRadius: 5, fontSize: '0.95rem', fontFamily: 'inherit', background: 'white' }}
           >
             {DIFFICOLTA_ORDER.map((d) => {
-              const count = verificheByDifficolta(d).length;
+              const count = verificheByDifficolta(d, categoria).length;
+              const label = isEsercitazione ? `simulazion${count === 1 ? 'e' : 'i'}` : `verific${count === 1 ? 'a' : 'he'}`;
               return (
-                <option key={d} value={d}>
-                  {d} ({count} verific{count === 1 ? 'a' : 'he'})
+                <option key={d} value={d} disabled={count === 0}>
+                  {d} ({count} {label})
                 </option>
               );
             })}
@@ -65,22 +74,22 @@ export function StudentInfoScreen({ durataMin, onStart }: Props) {
         <div className="field">
           <label htmlFor="durata">
             Durata (minuti)
-            {DURATA_BLOCCATA !== null && <span className="muted" style={{ marginLeft: '0.5rem', fontWeight: 400 }}>— impostata dal docente</span>}
+            {durataBloccata !== null && <span className="muted" style={{ marginLeft: '0.5rem', fontWeight: 400 }}>— impostata dal docente</span>}
           </label>
           <input
             id="durata"
             type="number"
             min={5}
             max={180}
-            value={DURATA_BLOCCATA ?? durata}
+            value={durataBloccata ?? durata}
             onChange={(e) => setDurata(Number(e.target.value))}
-            readOnly={DURATA_BLOCCATA !== null}
-            disabled={DURATA_BLOCCATA !== null}
+            readOnly={durataBloccata !== null}
+            disabled={durataBloccata !== null}
           />
         </div>
       </div>
       <button className="btn" type="submit" disabled={!valid} style={{ width: '100%' }}>
-        Sorteggia verifica e inizia
+        {isEsercitazione ? 'Sorteggia simulazione e inizia' : 'Sorteggia verifica e inizia'}
       </button>
     </form>
   );

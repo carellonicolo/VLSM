@@ -5,6 +5,7 @@ const v1: Verifica = {
   titolo: 'Verifica 1',
   difficolta: 'Base',
   puntiTotali: 30,
+  categoria: 'verifica',
   esercizi: [
     {
       id: 'es1',
@@ -86,6 +87,7 @@ const v2: Verifica = {
   titolo: 'Verifica 2',
   difficolta: 'Base',
   puntiTotali: 30,
+  categoria: 'verifica',
   esercizi: [
     {
       id: 'es1',
@@ -167,6 +169,7 @@ const v3: Verifica = {
   titolo: 'Verifica 3',
   difficolta: 'Media',
   puntiTotali: 30,
+  categoria: 'verifica',
   esercizi: [
     {
       id: 'es1',
@@ -249,6 +252,7 @@ const v4: Verifica = {
   titolo: 'Verifica 4',
   difficolta: 'Alta',
   puntiTotali: 30,
+  categoria: 'verifica',
   esercizi: [
     {
       id: 'es1',
@@ -332,6 +336,7 @@ const v5: Verifica = {
   titolo: 'Verifica 5',
   difficolta: 'Media',
   puntiTotali: 30,
+  categoria: 'verifica',
   esercizi: [
     {
       id: 'es1',
@@ -416,6 +421,7 @@ const v6: Verifica = {
   titolo: 'Verifica 6',
   difficolta: 'Esperta',
   puntiTotali: 30,
+  categoria: 'verifica',
   esercizi: [
     {
       id: 'es1',
@@ -504,6 +510,7 @@ const v7: Verifica = {
   titolo: 'Verifica 7',
   difficolta: 'Base',
   puntiTotali: 30,
+  categoria: 'verifica',
   esercizi: [
     {
       id: 'es1', tipo: 'vlsm-alloc', puntiTotali: 8, puntiPerRiga: 2,
@@ -573,6 +580,7 @@ const v8: Verifica = {
   titolo: 'Verifica 8',
   difficolta: 'Base',
   puntiTotali: 30,
+  categoria: 'verifica',
   esercizi: [
     {
       id: 'es1', tipo: 'vlsm-alloc', puntiTotali: 8, puntiPerRiga: 2,
@@ -642,6 +650,7 @@ const v9: Verifica = {
   titolo: 'Verifica 9',
   difficolta: 'Alta',
   puntiTotali: 30,
+  categoria: 'verifica',
   esercizi: [
     {
       id: 'es1', tipo: 'vlsm-alloc', puntiTotali: 10, puntiPerRiga: 2,
@@ -714,6 +723,7 @@ const v10: Verifica = {
   titolo: 'Verifica 10',
   difficolta: 'Media',
   puntiTotali: 30,
+  categoria: 'verifica',
   esercizi: [
     {
       id: 'es1', tipo: 'vlsm-alloc', puntiTotali: 10, puntiPerRiga: 2,
@@ -784,6 +794,7 @@ const v11: Verifica = {
   titolo: 'Verifica 11',
   difficolta: 'Media',
   puntiTotali: 30,
+  categoria: 'verifica',
   esercizi: [
     {
       id: 'es1', tipo: 'vlsm-alloc', puntiTotali: 10, puntiPerRiga: 2,
@@ -854,6 +865,7 @@ const v12: Verifica = {
   titolo: 'Verifica 12',
   difficolta: 'Alta',
   puntiTotali: 30,
+  categoria: 'verifica',
   esercizi: [
     {
       id: 'es1', tipo: 'vlsm-alloc', puntiTotali: 10, puntiPerRiga: 2,
@@ -926,6 +938,7 @@ const v13: Verifica = {
   titolo: 'Verifica 13',
   difficolta: 'Alta',
   puntiTotali: 30,
+  categoria: 'verifica',
   esercizi: [
     {
       id: 'es1', tipo: 'vlsm-alloc', puntiTotali: 10, puntiPerRiga: 2,
@@ -998,6 +1011,7 @@ const v14: Verifica = {
   titolo: 'Verifica 14',
   difficolta: 'Esperta',
   puntiTotali: 30,
+  categoria: 'verifica',
   esercizi: [
     {
       id: 'es1', tipo: 'vlsm-alloc', puntiTotali: 10, puntiPerRiga: 2,
@@ -1071,6 +1085,7 @@ const v15: Verifica = {
   titolo: 'Verifica 15',
   difficolta: 'Esperta',
   puntiTotali: 30,
+  categoria: 'verifica',
   esercizi: [
     {
       id: 'es1', tipo: 'vlsm-alloc', puntiTotali: 10, puntiPerRiga: 2,
@@ -1144,6 +1159,7 @@ const v16: Verifica = {
   titolo: 'Verifica 16',
   difficolta: 'Esperta',
   puntiTotali: 30,
+  categoria: 'verifica',
   esercizi: [
     {
       id: 'es1', tipo: 'vlsm-alloc', puntiTotali: 10, puntiPerRiga: 2,
@@ -1212,12 +1228,483 @@ const v16: Verifica = {
   ],
 };
 
-export const VERIFICHE: Verifica[] = [v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16];
+// ============== SIMULAZIONI (esercitazioni libere) ==============
+
+const s1: Verifica = {
+  id: 's1', titolo: 'Simulazione 1', difficolta: 'Base', categoria: 'esercitazione', puntiTotali: 30,
+  esercizi: [
+    {
+      id: 'es1', tipo: 'vlsm-alloc', puntiTotali: 8, puntiPerRiga: 2,
+      titolo: 'Esercizio 1 — VLSM: allocazione sottoreti',
+      reteMadre: '192.168.5.0/24',
+      requisiti: [
+        { nome: 'LAN_A', host: 40 }, { nome: 'LAN_B', host: 18 },
+        { nome: 'LAN_C', host: 8 }, { nome: 'WAN_1', host: 2 },
+      ],
+      consegna: 'Applicare il VLSM alla rete 192.168.5.0/24 per soddisfare i requisiti indicati.',
+    },
+    {
+      id: 'es2', tipo: 'vlsm-alloc', puntiTotali: 7, puntiPerRiga: 1,
+      titolo: 'Esercizio 2 — VLSM: piano multi-segmento',
+      reteMadre: '10.3.0.0/22',
+      requisiti: [
+        { nome: 'LAN_A', host: 180 }, { nome: 'LAN_B', host: 90 },
+        { nome: 'LAN_C', host: 45 }, { nome: 'LAN_D', host: 20 },
+        { nome: 'LAN_E', host: 8 }, { nome: 'WAN_1', host: 2 }, { nome: 'WAN_2', host: 2 },
+      ],
+      consegna: 'Applicare il VLSM alla rete 10.3.0.0/22 per soddisfare i requisiti indicati.',
+    },
+    {
+      id: 'es3', tipo: 'parametri', puntiTotali: 7, puntiPerRiga: 1,
+      titolo: 'Esercizio 3 — Parametri di sottorete',
+      modalitaInput: 'ip-prefisso',
+      righe: [
+        { rowKey: '10.0.0.50/26', ipPrefisso: '10.0.0.50/26' },
+        { rowKey: '192.168.10.100/27', ipPrefisso: '192.168.10.100/27' },
+        { rowKey: '172.16.10.50/22', ipPrefisso: '172.16.10.50/22' },
+        { rowKey: '10.5.5.50/28', ipPrefisso: '10.5.5.50/28' },
+        { rowKey: '192.168.80.100/25', ipPrefisso: '192.168.80.100/25' },
+        { rowKey: '172.16.10.100/20', ipPrefisso: '172.16.10.100/20' },
+        { rowKey: '10.3.3.5/30', ipPrefisso: '10.3.3.5/30' },
+      ],
+      consegna: 'Per ciascun indirizzo host/prefisso, determinare i parametri richiesti.',
+    },
+    {
+      id: 'es4', tipo: 'analisi-piano', puntiTotali: 8,
+      titolo: 'Esercizio 4 — Analisi piano VLSM esistente',
+      bloccoPadre: '10.8.0.0/21',
+      consegna: 'Un amministratore ha allocato le seguenti sottoreti all\'interno del blocco 10.8.0.0/21.',
+      parteA: { punti: 5, righe: [
+        { rowKey: 'A', indRete: '10.8.0.0', prefisso: 24 },
+        { rowKey: 'B', indRete: '10.8.1.0', prefisso: 25 },
+        { rowKey: 'C', indRete: '10.8.1.128', prefisso: 26 },
+        { rowKey: 'D', indRete: '10.8.2.0', prefisso: 23 },
+        { rowKey: 'E', indRete: '10.8.4.0', prefisso: 24 },
+      ]},
+      parteB: { punti: 2, numeroRighe: 3 },
+      parteC: { punti: 1, hostRichiesti: 50 },
+    },
+  ],
+};
+
+const s2: Verifica = {
+  id: 's2', titolo: 'Simulazione 2', difficolta: 'Base', categoria: 'esercitazione', puntiTotali: 30,
+  esercizi: [
+    {
+      id: 'es1', tipo: 'vlsm-alloc', puntiTotali: 8, puntiPerRiga: 2,
+      titolo: 'Esercizio 1 — VLSM: allocazione sottoreti',
+      reteMadre: '192.168.80.0/24',
+      requisiti: [
+        { nome: 'LAN_A', host: 60 }, { nome: 'LAN_B', host: 25 },
+        { nome: 'LAN_C', host: 12 }, { nome: 'WAN_1', host: 2 },
+      ],
+      consegna: 'Applicare il VLSM alla rete 192.168.80.0/24 per soddisfare i requisiti indicati.',
+    },
+    {
+      id: 'es2', tipo: 'vlsm-alloc', puntiTotali: 7, puntiPerRiga: 1,
+      titolo: 'Esercizio 2 — VLSM: piano multi-segmento',
+      reteMadre: '172.16.16.0/22',
+      requisiti: [
+        { nome: 'LAN_A', host: 200 }, { nome: 'LAN_B', host: 100 },
+        { nome: 'LAN_C', host: 50 }, { nome: 'LAN_D', host: 20 },
+        { nome: 'LAN_E', host: 10 }, { nome: 'WAN_1', host: 2 }, { nome: 'WAN_2', host: 2 },
+      ],
+      consegna: 'Applicare il VLSM alla rete 172.16.16.0/22 per soddisfare i requisiti indicati.',
+    },
+    {
+      id: 'es3', tipo: 'parametri', puntiTotali: 7, puntiPerRiga: 1,
+      titolo: 'Esercizio 3 — Parametri di sottorete',
+      modalitaInput: 'ip-prefisso',
+      righe: [
+        { rowKey: '10.10.0.50/27', ipPrefisso: '10.10.0.50/27' },
+        { rowKey: '192.168.20.50/26', ipPrefisso: '192.168.20.50/26' },
+        { rowKey: '172.16.25.50/22', ipPrefisso: '172.16.25.50/22' },
+        { rowKey: '10.15.15.50/28', ipPrefisso: '10.15.15.50/28' },
+        { rowKey: '192.168.150.100/25', ipPrefisso: '192.168.150.100/25' },
+        { rowKey: '172.16.40.50/20', ipPrefisso: '172.16.40.50/20' },
+        { rowKey: '10.5.10.5/30', ipPrefisso: '10.5.10.5/30' },
+      ],
+      consegna: 'Per ciascun indirizzo host/prefisso, determinare i parametri richiesti.',
+    },
+    {
+      id: 'es4', tipo: 'analisi-piano', puntiTotali: 8,
+      titolo: 'Esercizio 4 — Analisi piano VLSM esistente',
+      bloccoPadre: '10.9.0.0/21',
+      consegna: 'Un amministratore ha allocato le seguenti sottoreti all\'interno del blocco 10.9.0.0/21.',
+      parteA: { punti: 5, righe: [
+        { rowKey: 'A', indRete: '10.9.0.0', prefisso: 23 },
+        { rowKey: 'B', indRete: '10.9.2.0', prefisso: 24 },
+        { rowKey: 'C', indRete: '10.9.3.0', prefisso: 25 },
+        { rowKey: 'D', indRete: '10.9.3.128', prefisso: 26 },
+        { rowKey: 'E', indRete: '10.9.4.0', prefisso: 23 },
+      ]},
+      parteB: { punti: 2, numeroRighe: 2 },
+      parteC: { punti: 1, hostRichiesti: 30 },
+    },
+  ],
+};
+
+const s3: Verifica = {
+  id: 's3', titolo: 'Simulazione 3', difficolta: 'Media', categoria: 'esercitazione', puntiTotali: 30,
+  esercizi: [
+    {
+      id: 'es1', tipo: 'vlsm-alloc', puntiTotali: 10, puntiPerRiga: 2,
+      titolo: 'Esercizio 1 — VLSM: allocazione sottoreti',
+      reteMadre: '10.15.0.0/23',
+      requisiti: [
+        { nome: 'LAN_A', host: 120 }, { nome: 'LAN_B', host: 60 },
+        { nome: 'LAN_C', host: 25 }, { nome: 'LAN_D', host: 10 }, { nome: 'WAN_1', host: 2 },
+      ],
+      consegna: 'Applicare il VLSM alla rete 10.15.0.0/23 per soddisfare i requisiti indicati.',
+    },
+    {
+      id: 'es2', tipo: 'vlsm-alloc', puntiTotali: 7, puntiPerRiga: 1,
+      titolo: 'Esercizio 2 — VLSM: piano multi-segmento',
+      reteMadre: '172.19.4.0/22',
+      requisiti: [
+        { nome: 'LAN_A', host: 250 }, { nome: 'LAN_B', host: 120 },
+        { nome: 'LAN_C', host: 60 }, { nome: 'LAN_D', host: 30 },
+        { nome: 'LAN_E', host: 10 }, { nome: 'WAN_1', host: 2 }, { nome: 'WAN_2', host: 2 },
+      ],
+      consegna: 'Applicare il VLSM alla rete 172.19.4.0/22 per soddisfare i requisiti indicati.',
+    },
+    {
+      id: 'es3', tipo: 'parametri', puntiTotali: 7, puntiPerRiga: 1,
+      titolo: 'Esercizio 3 — Parametri di sottorete',
+      modalitaInput: 'ip-prefisso',
+      righe: [
+        { rowKey: '10.55.20.50/29', ipPrefisso: '10.55.20.50/29' },
+        { rowKey: '172.21.50.100/21', ipPrefisso: '172.21.50.100/21' },
+        { rowKey: '192.168.150.250/25', ipPrefisso: '192.168.150.250/25' },
+        { rowKey: '10.32.200.100/23', ipPrefisso: '10.32.200.100/23' },
+        { rowKey: '172.17.200.100/18', ipPrefisso: '172.17.200.100/18' },
+        { rowKey: '192.168.66.99/27', ipPrefisso: '192.168.66.99/27' },
+        { rowKey: '10.155.0.1/22', ipPrefisso: '10.155.0.1/22' },
+      ],
+      consegna: 'Per ciascun indirizzo host/prefisso, determinare i parametri richiesti.',
+    },
+    {
+      id: 'es4', tipo: 'analisi-piano', puntiTotali: 6,
+      titolo: 'Esercizio 4 — Analisi piano VLSM esistente',
+      bloccoPadre: '10.20.0.0/19',
+      consegna: 'Un amministratore ha allocato le seguenti sottoreti all\'interno del blocco 10.20.0.0/19.',
+      parteA: { punti: 3, righe: [
+        { rowKey: 'A', indRete: '10.20.0.0', prefisso: 22 },
+        { rowKey: 'B', indRete: '10.20.4.0', prefisso: 23 },
+        { rowKey: 'C', indRete: '10.20.6.0', prefisso: 24 },
+        { rowKey: 'D', indRete: '10.20.7.0', prefisso: 25 },
+        { rowKey: 'E', indRete: '10.20.7.128', prefisso: 26 },
+      ]},
+      parteB: { punti: 2, numeroRighe: 3 },
+      parteC: { punti: 1, hostRichiesti: 400 },
+    },
+  ],
+};
+
+const s4: Verifica = {
+  id: 's4', titolo: 'Simulazione 4', difficolta: 'Media', categoria: 'esercitazione', puntiTotali: 30,
+  esercizi: [
+    {
+      id: 'es1', tipo: 'vlsm-alloc', puntiTotali: 10, puntiPerRiga: 2,
+      titolo: 'Esercizio 1 — VLSM: allocazione sottoreti',
+      reteMadre: '172.25.0.0/22',
+      requisiti: [
+        { nome: 'LAN_A', host: 350 }, { nome: 'LAN_B', host: 140 },
+        { nome: 'LAN_C', host: 60 }, { nome: 'LAN_D', host: 20 }, { nome: 'WAN_1', host: 2 },
+      ],
+      consegna: 'Applicare il VLSM alla rete 172.25.0.0/22 per soddisfare i requisiti indicati.',
+    },
+    {
+      id: 'es2', tipo: 'vlsm-alloc', puntiTotali: 7, puntiPerRiga: 1,
+      titolo: 'Esercizio 2 — VLSM: piano multi-segmento',
+      reteMadre: '10.45.0.0/21',
+      requisiti: [
+        { nome: 'LAN_A', host: 300 }, { nome: 'LAN_B', host: 150 },
+        { nome: 'LAN_C', host: 70 }, { nome: 'LAN_D', host: 30 },
+        { nome: 'LAN_E', host: 12 }, { nome: 'WAN_1', host: 2 }, { nome: 'WAN_2', host: 2 },
+      ],
+      consegna: 'Applicare il VLSM alla rete 10.45.0.0/21 per soddisfare i requisiti indicati.',
+    },
+    {
+      id: 'es3', tipo: 'parametri', puntiTotali: 7, puntiPerRiga: 1,
+      titolo: 'Esercizio 3 — Parametri di sottorete',
+      modalitaInput: 'ip-prefisso',
+      righe: [
+        { rowKey: '10.62.20.150/29', ipPrefisso: '10.62.20.150/29' },
+        { rowKey: '172.27.130.100/22', ipPrefisso: '172.27.130.100/22' },
+        { rowKey: '192.168.55.50/25', ipPrefisso: '192.168.55.50/25' },
+        { rowKey: '10.47.50.130/19', ipPrefisso: '10.47.50.130/19' },
+        { rowKey: '172.18.155.200/21', ipPrefisso: '172.18.155.200/21' },
+        { rowKey: '192.168.252.100/26', ipPrefisso: '192.168.252.100/26' },
+        { rowKey: '10.2.0.5/30', ipPrefisso: '10.2.0.5/30' },
+      ],
+      consegna: 'Per ciascun indirizzo host/prefisso, determinare i parametri richiesti.',
+    },
+    {
+      id: 'es4', tipo: 'analisi-piano', puntiTotali: 6,
+      titolo: 'Esercizio 4 — Analisi piano VLSM esistente',
+      bloccoPadre: '10.40.0.0/20',
+      consegna: 'Un amministratore ha allocato le seguenti sottoreti all\'interno del blocco 10.40.0.0/20.',
+      parteA: { punti: 3, righe: [
+        { rowKey: 'A', indRete: '10.40.0.0', prefisso: 22 },
+        { rowKey: 'B', indRete: '10.40.4.0', prefisso: 23 },
+        { rowKey: 'C', indRete: '10.40.6.0', prefisso: 25 },
+        { rowKey: 'D', indRete: '10.40.6.128', prefisso: 26 },
+        { rowKey: 'E', indRete: '10.40.7.0', prefisso: 24 },
+      ]},
+      parteB: { punti: 2, numeroRighe: 2 },
+      parteC: { punti: 1, hostRichiesti: 400 },
+    },
+  ],
+};
+
+const s5: Verifica = {
+  id: 's5', titolo: 'Simulazione 5', difficolta: 'Alta', categoria: 'esercitazione', puntiTotali: 30,
+  esercizi: [
+    {
+      id: 'es1', tipo: 'vlsm-alloc', puntiTotali: 10, puntiPerRiga: 2,
+      titolo: 'Esercizio 1 — VLSM: allocazione sottoreti',
+      reteMadre: '172.28.0.0/19',
+      requisiti: [
+        { nome: 'LAN_A', host: 1500 }, { nome: 'LAN_B', host: 700 },
+        { nome: 'LAN_C', host: 300 }, { nome: 'LAN_D', host: 100 }, { nome: 'LAN_E', host: 30 },
+      ],
+      consegna: 'Applicare il VLSM alla rete 172.28.0.0/19 per soddisfare i requisiti indicati.',
+    },
+    {
+      id: 'es2', tipo: 'vlsm-alloc', puntiTotali: 8, puntiPerRiga: 1,
+      titolo: 'Esercizio 2 — VLSM: piano multi-segmento',
+      reteMadre: '10.65.0.0/20',
+      requisiti: [
+        { nome: 'LAN_A', host: 400 }, { nome: 'LAN_B', host: 200 },
+        { nome: 'LAN_C', host: 100 }, { nome: 'LAN_D', host: 50 },
+        { nome: 'LAN_E', host: 20 }, { nome: 'LAN_F', host: 8 },
+        { nome: 'WAN_1', host: 2 }, { nome: 'WAN_2', host: 2 },
+      ],
+      consegna: 'Applicare il VLSM alla rete 10.65.0.0/20 per soddisfare i requisiti indicati.',
+    },
+    {
+      id: 'es3', tipo: 'parametri', puntiTotali: 7, puntiPerRiga: 1,
+      titolo: 'Esercizio 3 — Parametri di sottorete',
+      modalitaInput: 'ip-prefisso',
+      righe: [
+        { rowKey: '10.88.200.50/12', ipPrefisso: '10.88.200.50/12' },
+        { rowKey: '172.17.50.100/13', ipPrefisso: '172.17.50.100/13' },
+        { rowKey: '192.168.110.10/29', ipPrefisso: '192.168.110.10/29' },
+        { rowKey: '10.57.200.200/15', ipPrefisso: '10.57.200.200/15' },
+        { rowKey: '172.22.0.50/14', ipPrefisso: '172.22.0.50/14' },
+        { rowKey: '10.132.65.5/18', ipPrefisso: '10.132.65.5/18' },
+        { rowKey: '192.168.31.255/30', ipPrefisso: '192.168.31.255/30' },
+      ],
+      consegna: 'Per ciascun indirizzo host/prefisso, determinare i parametri richiesti.',
+    },
+    {
+      id: 'es4', tipo: 'analisi-piano', puntiTotali: 5,
+      titolo: 'Esercizio 4 — Analisi piano VLSM esistente',
+      bloccoPadre: '10.60.0.0/16',
+      consegna: 'Un amministratore ha allocato le seguenti sottoreti all\'interno del blocco 10.60.0.0/16.',
+      parteA: { punti: 3, righe: [
+        { rowKey: 'A', indRete: '10.60.0.0', prefisso: 18 },
+        { rowKey: 'B', indRete: '10.60.64.0', prefisso: 19 },
+        { rowKey: 'C', indRete: '10.60.96.0', prefisso: 20 },
+        { rowKey: 'D', indRete: '10.60.112.0', prefisso: 21 },
+        { rowKey: 'E', indRete: '10.60.120.0', prefisso: 22 },
+        { rowKey: 'F', indRete: '10.60.124.0', prefisso: 24 },
+      ]},
+      parteB: { punti: 1, numeroRighe: 3 },
+      parteC: { punti: 1, hostRichiesti: 5000 },
+    },
+  ],
+};
+
+const s6: Verifica = {
+  id: 's6', titolo: 'Simulazione 6', difficolta: 'Alta', categoria: 'esercitazione', puntiTotali: 30,
+  esercizi: [
+    {
+      id: 'es1', tipo: 'vlsm-alloc', puntiTotali: 10, puntiPerRiga: 2,
+      titolo: 'Esercizio 1 — VLSM: allocazione sottoreti',
+      reteMadre: '10.52.0.0/19',
+      requisiti: [
+        { nome: 'LAN_A', host: 1800 }, { nome: 'LAN_B', host: 900 },
+        { nome: 'LAN_C', host: 400 }, { nome: 'LAN_D', host: 150 }, { nome: 'LAN_E', host: 40 },
+      ],
+      consegna: 'Applicare il VLSM alla rete 10.52.0.0/19 per soddisfare i requisiti indicati.',
+    },
+    {
+      id: 'es2', tipo: 'vlsm-alloc', puntiTotali: 8, puntiPerRiga: 1,
+      titolo: 'Esercizio 2 — VLSM: piano multi-segmento',
+      reteMadre: '172.45.0.0/20',
+      requisiti: [
+        { nome: 'LAN_A', host: 500 }, { nome: 'LAN_B', host: 200 },
+        { nome: 'LAN_C', host: 120 }, { nome: 'LAN_D', host: 60 },
+        { nome: 'LAN_E', host: 30 }, { nome: 'LAN_F', host: 10 },
+        { nome: 'WAN_1', host: 2 }, { nome: 'WAN_2', host: 2 },
+      ],
+      consegna: 'Applicare il VLSM alla rete 172.45.0.0/20 per soddisfare i requisiti indicati.',
+    },
+    {
+      id: 'es3', tipo: 'parametri', puntiTotali: 7, puntiPerRiga: 1,
+      titolo: 'Esercizio 3 — Parametri di sottorete',
+      modalitaInput: 'ip-prefisso',
+      righe: [
+        { rowKey: '10.47.130.100/12', ipPrefisso: '10.47.130.100/12' },
+        { rowKey: '172.19.200.100/13', ipPrefisso: '172.19.200.100/13' },
+        { rowKey: '192.168.79.50/28', ipPrefisso: '192.168.79.50/28' },
+        { rowKey: '10.78.130.50/15', ipPrefisso: '10.78.130.50/15' },
+        { rowKey: '172.26.100.10/14', ipPrefisso: '172.26.100.10/14' },
+        { rowKey: '10.202.130.10/18', ipPrefisso: '10.202.130.10/18' },
+        { rowKey: '192.168.51.5/29', ipPrefisso: '192.168.51.5/29' },
+      ],
+      consegna: 'Per ciascun indirizzo host/prefisso, determinare i parametri richiesti.',
+    },
+    {
+      id: 'es4', tipo: 'analisi-piano', puntiTotali: 5,
+      titolo: 'Esercizio 4 — Analisi piano VLSM esistente',
+      bloccoPadre: '10.36.0.0/17',
+      consegna: 'Un amministratore ha allocato le seguenti sottoreti all\'interno del blocco 10.36.0.0/17.',
+      parteA: { punti: 3, righe: [
+        { rowKey: 'A', indRete: '10.36.0.0', prefisso: 19 },
+        { rowKey: 'B', indRete: '10.36.32.0', prefisso: 20 },
+        { rowKey: 'C', indRete: '10.36.48.0', prefisso: 21 },
+        { rowKey: 'D', indRete: '10.36.56.0', prefisso: 22 },
+        { rowKey: 'E', indRete: '10.36.60.0', prefisso: 23 },
+        { rowKey: 'F', indRete: '10.36.62.0', prefisso: 24 },
+      ]},
+      parteB: { punti: 1, numeroRighe: 2 },
+      parteC: { punti: 1, hostRichiesti: 1500 },
+    },
+  ],
+};
+
+const s7: Verifica = {
+  id: 's7', titolo: 'Simulazione 7', difficolta: 'Esperta', categoria: 'esercitazione', puntiTotali: 30,
+  esercizi: [
+    {
+      id: 'es1', tipo: 'vlsm-alloc', puntiTotali: 10, puntiPerRiga: 2,
+      titolo: 'Esercizio 1 — VLSM: piano enterprise',
+      reteMadre: '10.32.0.0/11',
+      requisiti: [
+        { nome: 'LAN_A', host: 180000 }, { nome: 'LAN_B', host: 90000 },
+        { nome: 'LAN_C', host: 40000 }, { nome: 'LAN_D', host: 15000 }, { nome: 'LAN_E', host: 5000 },
+      ],
+      consegna: 'Applicare il VLSM alla rete 10.32.0.0/11 per soddisfare i requisiti indicati.',
+    },
+    {
+      id: 'es2', tipo: 'vlsm-alloc', puntiTotali: 8, puntiPerRiga: 1,
+      titolo: 'Esercizio 2 — VLSM: piano multi-segmento',
+      reteMadre: '10.48.0.0/16',
+      requisiti: [
+        { nome: 'LAN_A', host: 7000 }, { nome: 'LAN_B', host: 3500 },
+        { nome: 'LAN_C', host: 1500 }, { nome: 'LAN_D', host: 800 },
+        { nome: 'LAN_E', host: 400 }, { nome: 'LAN_F', host: 180 },
+        { nome: 'WAN_1', host: 2 }, { nome: 'WAN_2', host: 2 },
+      ],
+      consegna: 'Applicare il VLSM alla rete 10.48.0.0/16 per soddisfare i requisiti indicati.',
+    },
+    {
+      id: 'es3', tipo: 'parametri', puntiTotali: 7, puntiPerRiga: 1,
+      titolo: 'Esercizio 3 — Parametri di sottorete',
+      modalitaInput: 'ip-prefisso',
+      righe: [
+        { rowKey: '10.155.200.5/13', ipPrefisso: '10.155.200.5/13' },
+        { rowKey: '172.55.100.50/12', ipPrefisso: '172.55.100.50/12' },
+        { rowKey: '192.168.220.100/27', ipPrefisso: '192.168.220.100/27' },
+        { rowKey: '10.85.130.5/15', ipPrefisso: '10.85.130.5/15' },
+        { rowKey: '172.135.200.10/14', ipPrefisso: '172.135.200.10/14' },
+        { rowKey: '10.225.50.10/16', ipPrefisso: '10.225.50.10/16' },
+        { rowKey: '192.168.135.255/30', ipPrefisso: '192.168.135.255/30' },
+      ],
+      consegna: 'Per ciascun indirizzo host/prefisso, determinare i parametri richiesti.',
+    },
+    {
+      id: 'es4', tipo: 'analisi-piano', puntiTotali: 5,
+      titolo: 'Esercizio 4 — Analisi piano VLSM enterprise',
+      bloccoPadre: '172.20.0.0/14',
+      consegna: 'Un\'organizzazione ha suddiviso il blocco 172.20.0.0/14 tra sette reparti.',
+      parteA: { punti: 3, righe: [
+        { rowKey: 'A', indRete: '172.20.0.0', prefisso: 15 },
+        { rowKey: 'B', indRete: '172.22.0.0', prefisso: 16 },
+        { rowKey: 'C', indRete: '172.23.0.0', prefisso: 17 },
+        { rowKey: 'D', indRete: '172.23.128.0', prefisso: 19 },
+        { rowKey: 'E', indRete: '172.23.160.0', prefisso: 20 },
+        { rowKey: 'F', indRete: '172.23.176.0', prefisso: 21 },
+        { rowKey: 'G', indRete: '172.23.184.0', prefisso: 22 },
+      ]},
+      parteB: { punti: 1, numeroRighe: 2 },
+      parteC: { punti: 1, hostRichiesti: 3000 },
+    },
+  ],
+};
+
+const s8: Verifica = {
+  id: 's8', titolo: 'Simulazione 8', difficolta: 'Esperta', categoria: 'esercitazione', puntiTotali: 30,
+  esercizi: [
+    {
+      id: 'es1', tipo: 'vlsm-alloc', puntiTotali: 10, puntiPerRiga: 2,
+      titolo: 'Esercizio 1 — VLSM: piano enterprise',
+      reteMadre: '172.96.0.0/11',
+      requisiti: [
+        { nome: 'LAN_A', host: 220000 }, { nome: 'LAN_B', host: 110000 },
+        { nome: 'LAN_C', host: 55000 }, { nome: 'LAN_D', host: 25000 }, { nome: 'LAN_E', host: 9000 },
+      ],
+      consegna: 'Applicare il VLSM alla rete 172.96.0.0/11 per soddisfare i requisiti indicati.',
+    },
+    {
+      id: 'es2', tipo: 'vlsm-alloc', puntiTotali: 8, puntiPerRiga: 1,
+      titolo: 'Esercizio 2 — VLSM: piano multi-segmento',
+      reteMadre: '10.112.0.0/16',
+      requisiti: [
+        { nome: 'LAN_A', host: 9000 }, { nome: 'LAN_B', host: 4500 },
+        { nome: 'LAN_C', host: 2200 }, { nome: 'LAN_D', host: 1200 },
+        { nome: 'LAN_E', host: 600 }, { nome: 'LAN_F', host: 180 },
+        { nome: 'WAN_1', host: 2 }, { nome: 'WAN_2', host: 2 },
+      ],
+      consegna: 'Applicare il VLSM alla rete 10.112.0.0/16 per soddisfare i requisiti indicati.',
+    },
+    {
+      id: 'es3', tipo: 'parametri', puntiTotali: 7, puntiPerRiga: 1,
+      titolo: 'Esercizio 3 — Parametri di sottorete',
+      modalitaInput: 'ip-prefisso',
+      righe: [
+        { rowKey: '10.105.130.10/11', ipPrefisso: '10.105.130.10/11' },
+        { rowKey: '172.25.5.10/13', ipPrefisso: '172.25.5.10/13' },
+        { rowKey: '192.168.245.10/26', ipPrefisso: '192.168.245.10/26' },
+        { rowKey: '10.135.0.5/12', ipPrefisso: '10.135.0.5/12' },
+        { rowKey: '172.90.50.5/14', ipPrefisso: '172.90.50.5/14' },
+        { rowKey: '10.5.200.200/22', ipPrefisso: '10.5.200.200/22' },
+        { rowKey: '192.168.105.99/29', ipPrefisso: '192.168.105.99/29' },
+      ],
+      consegna: 'Per ciascun indirizzo host/prefisso, determinare i parametri richiesti.',
+    },
+    {
+      id: 'es4', tipo: 'analisi-piano', puntiTotali: 5,
+      titolo: 'Esercizio 4 — Analisi piano VLSM enterprise',
+      bloccoPadre: '10.144.0.0/12',
+      consegna: 'Un\'organizzazione ha suddiviso il blocco 10.144.0.0/12 tra sette reparti.',
+      parteA: { punti: 3, righe: [
+        { rowKey: 'A', indRete: '10.144.0.0', prefisso: 14 },
+        { rowKey: 'B', indRete: '10.148.0.0', prefisso: 15 },
+        { rowKey: 'C', indRete: '10.150.0.0', prefisso: 16 },
+        { rowKey: 'D', indRete: '10.151.0.0', prefisso: 17 },
+        { rowKey: 'E', indRete: '10.151.128.0', prefisso: 18 },
+        { rowKey: 'F', indRete: '10.151.192.0', prefisso: 20 },
+        { rowKey: 'G', indRete: '10.151.208.0', prefisso: 21 },
+      ]},
+      parteB: { punti: 1, numeroRighe: 3 },
+      parteC: { punti: 1, hostRichiesti: 40000 },
+    },
+  ],
+};
+
+export const VERIFICHE: Verifica[] = [
+  v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16,
+  s1, s2, s3, s4, s5, s6, s7, s8,
+];
 
 export function getVerifica(id: string): Verifica | undefined {
   return VERIFICHE.find((v) => v.id === id);
 }
 
-export function verificheByDifficolta(d: Verifica['difficolta']): Verifica[] {
-  return VERIFICHE.filter((v) => v.difficolta === d);
+export function verificheByDifficolta(d: Verifica['difficolta'], categoria: Verifica['categoria'] = 'verifica'): Verifica[] {
+  return VERIFICHE.filter((v) => v.difficolta === d && v.categoria === categoria);
 }

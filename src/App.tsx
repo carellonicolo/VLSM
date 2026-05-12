@@ -12,10 +12,11 @@ import { gradeVerifica } from './lib/grading';
 import type { MotivoConsegna } from './types/domain';
 
 export default function App() {
-  const { session, startTest, updateRiga, updateParteC, goPhase, setEsito, reset } = useSession();
+  const { session, startTest, updateRiga, updateParteC, goPhase, setEsito, reset, setCategoria } = useSession();
   const [loggedIn, setLoggedIn] = useState(false);
 
   const verifica = useMemo(() => (session.verificaId ? getVerifica(session.verificaId) : undefined), [session.verificaId]);
+  const categoria = session.categoria ?? 'verifica';
 
   const submit = useCallback(
     (motivo: MotivoConsegna) => {
@@ -27,18 +28,30 @@ export default function App() {
     [verifica, session.answers, session.studente, session.startedAt, setEsito]
   );
 
-  // Auto-recupero: se la sessione è in 'test' ma scaduta, forza consegna timeout
   useEffect(() => {
     if (session.phase === 'test' && session.deadlineMs && Date.now() >= session.deadlineMs) {
       submit('timeout');
     }
   }, [session.phase, session.deadlineMs, submit]);
 
-  if (!loggedIn && session.phase !== 'result') {
+  // Login screen visibile solo se non loggato come "verifica". In esercitazione
+  // si entra direttamente senza login.
+  const needsLogin = !loggedIn && categoria === 'verifica' && session.phase !== 'result';
+
+  if (needsLogin) {
     return (
       <div className="shell">
         <Header />
-        <LoginScreen onSuccess={() => setLoggedIn(true)} />
+        <LoginScreen
+          onSuccess={() => {
+            setCategoria('verifica');
+            setLoggedIn(true);
+          }}
+          onEsercitazione={() => {
+            setCategoria('esercitazione');
+            setLoggedIn(true);
+          }}
+        />
         <Footer />
       </div>
     );
@@ -50,6 +63,7 @@ export default function App() {
         <Header />
         <StudentInfoScreen
           durataMin={session.durataMin}
+          categoria={categoria}
           onStart={(s, v, d) => startTest(s, v, d)}
         />
         <Footer />

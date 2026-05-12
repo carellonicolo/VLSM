@@ -1,13 +1,13 @@
-import { writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { VERIFICHE } from '../src/data/verifiche';
 import type { Verifica } from '../src/types/domain';
 
-const HEADER = `---
+const HEADER = (categoria: Verifica['categoria']) => `---
 **ITIS G. Marconi — Verona | Sistemi e Reti (SRI) | Prof. N. Carello | A.S. 2025/2026**
 
 ---
-# VERIFICA SCRITTA — VLSM *(30 punti)*
+# ${categoria === 'esercitazione' ? 'SIMULAZIONE VLSM — ESERCITAZIONE LIBERA' : 'VERIFICA SCRITTA — VLSM'} *(30 punti)*
 
 | Alunno/a | Classe | Data |
 |----------|--------|------|
@@ -15,6 +15,7 @@ const HEADER = `---
 
 ---
 `;
+
 const FOOTER = `\n---\n*Nicolò Carello — info@nicolocarello.it*\n`;
 
 function emptyRow(cols: number): string {
@@ -22,7 +23,7 @@ function emptyRow(cols: number): string {
 }
 
 function renderVerifica(v: Verifica): string {
-  let out = HEADER;
+  let out = HEADER(v.categoria);
   for (const es of v.esercizi) {
     if (es.tipo === 'vlsm-alloc') {
       const ppr = es.puntiPerRiga;
@@ -58,11 +59,17 @@ function renderVerifica(v: Verifica): string {
   return out;
 }
 
-const NEW_IDS = ['v7', 'v8', 'v9', 'v10', 'v11', 'v12', 'v13', 'v14', 'v15', 'v16'];
+function pathFor(v: Verifica): string {
+  const tipoDir = v.categoria === 'esercitazione' ? 'esercitazioni' : 'verifiche';
+  const livelloDir = v.difficolta.toLowerCase();
+  const num = v.id.replace(/^[vs]/, '');
+  const filename = v.categoria === 'esercitazione' ? `simulazione_vlsm_${num}.md` : `verifica_vlsm_${num}.md`;
+  return join('docs', tipoDir, livelloDir, filename);
+}
+
 for (const v of VERIFICHE) {
-  if (!NEW_IDS.includes(v.id)) continue;
-  const num = v.id.replace('v', '');
-  const path = join('docs', `verifica_vlsm_${num}.md`);
+  const path = pathFor(v);
+  mkdirSync(join('docs', v.categoria === 'esercitazione' ? 'esercitazioni' : 'verifiche', v.difficolta.toLowerCase()), { recursive: true });
   writeFileSync(path, renderVerifica(v), 'utf-8');
   console.log(`Written: ${path}`);
 }

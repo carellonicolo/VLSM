@@ -1,5 +1,9 @@
-export type VerificaId = 'v1' | 'v2' | 'v3' | 'v4' | 'v5' | 'v6' | 'v7' | 'v8' | 'v9' | 'v10' | 'v11' | 'v12' | 'v13' | 'v14' | 'v15' | 'v16';
+export type VerificaId =
+  | 'v1' | 'v2' | 'v3' | 'v4' | 'v5' | 'v6' | 'v7' | 'v8'
+  | 'v9' | 'v10' | 'v11' | 'v12' | 'v13' | 'v14' | 'v15' | 'v16'
+  | 's1' | 's2' | 's3' | 's4' | 's5' | 's6' | 's7' | 's8';
 export type Difficolta = 'Base' | 'Media' | 'Alta' | 'Esperta';
+export type Categoria = 'verifica' | 'esercitazione';
 
 export const DIFFICOLTA_ORDER: Difficolta[] = ['Base', 'Media', 'Alta', 'Esperta'];
 
@@ -60,6 +64,7 @@ export interface Verifica {
   titolo: string;
   puntiTotali: number;
   difficolta: Difficolta;
+  categoria: Categoria;
   esercizi: Esercizio[];
 }
 
@@ -112,6 +117,7 @@ export interface DatiStudente {
 export interface EsitoFinale {
   verificaId: VerificaId;
   verificaTitolo: string;
+  categoria: Categoria;
   studente: DatiStudente;
   data: string;
   esercizi: EsitoEsercizio[];

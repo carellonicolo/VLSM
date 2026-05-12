@@ -49,6 +49,26 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 12,
   },
+  votoBoxEsercitazione: {
+    backgroundColor: '#7c5d00',
+    color: '#fff',
+    padding: 10,
+    borderRadius: 6,
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  bannerEsercitazione: {
+    backgroundColor: '#fff3c4',
+    border: 1,
+    borderColor: '#d4a017',
+    borderStyle: 'solid',
+    color: '#7c5d00',
+    padding: 6,
+    textAlign: 'center',
+    marginBottom: 10,
+    fontSize: 9,
+    fontWeight: 'bold',
+  },
   voto30: {
     fontSize: 24,
     fontWeight: 'bold',
@@ -147,7 +167,14 @@ export function PdfReport({ esito }: Props) {
         <Text style={styles.header}>
           ITIS G. Marconi — Verona | Sistemi e Reti (SRI) | Prof. N. Carello | A.S. 2025/2026
         </Text>
-        <Text style={styles.title}>{esito.verificaTitolo} — Correzione automatica</Text>
+        <Text style={styles.title}>
+          {esito.categoria === 'esercitazione' ? `${esito.verificaTitolo} — Esercitazione (autocorrezione)` : `${esito.verificaTitolo} — Correzione automatica`}
+        </Text>
+        {esito.categoria === 'esercitazione' && (
+          <Text style={styles.bannerEsercitazione}>
+            ⚠️ ESERCITAZIONE LIBERA — Questo documento NON vale come verifica ufficiale
+          </Text>
+        )}
 
         <View style={styles.meta}>
           <Text>
@@ -171,8 +198,10 @@ export function PdfReport({ esito }: Props) {
           </Text>
         </View>
 
-        <View style={styles.votoBox}>
-          <Text style={styles.voto30}>VOTO: {esito.voto30}/30</Text>
+        <View style={esito.categoria === 'esercitazione' ? styles.votoBoxEsercitazione : styles.votoBox}>
+          <Text style={styles.voto30}>
+            {esito.categoria === 'esercitazione' ? 'PUNTEGGIO' : 'VOTO'}: {esito.voto30}/30
+          </Text>
           <Text style={styles.voto10}>Equivalente in decimi: {esito.voto10}/10</Text>
           {esito.motivoConsegna === 'timeout' && (
             <Text style={{ fontSize: 8, marginTop: 4 }}>Consegna automatica per scadenza del tempo</Text>
@@ -230,16 +259,18 @@ export function PdfReport({ esito }: Props) {
           </View>
         ))}
 
-        <View style={styles.firme} wrap={false}>
-          <View style={styles.firmaBox}>
-            <Text style={styles.firmaLabel}>Firma studente:</Text>
-            <View style={styles.firmaLine} />
+        {esito.categoria !== 'esercitazione' && (
+          <View style={styles.firme} wrap={false}>
+            <View style={styles.firmaBox}>
+              <Text style={styles.firmaLabel}>Firma studente:</Text>
+              <View style={styles.firmaLine} />
+            </View>
+            <View style={styles.firmaBox}>
+              <Text style={styles.firmaLabel}>Firma docente:</Text>
+              <View style={styles.firmaLine} />
+            </View>
           </View>
-          <View style={styles.firmaBox}>
-            <Text style={styles.firmaLabel}>Firma docente:</Text>
-            <View style={styles.firmaLine} />
-          </View>
-        </View>
+        )}
 
         <Text style={styles.footer} fixed>
           Nicolò Carello — info@nicolocarello.it
