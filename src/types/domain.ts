@@ -115,6 +115,8 @@ export interface EsitoFinale {
   esercizi: EsitoEsercizio[];
   voto30: number;
   voto10: number;
+  startedAt: string;
   consegnatoAt: string;
+  durataMs: number;
   motivoConsegna: MotivoConsegna;
 }
