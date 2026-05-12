@@ -20,10 +20,11 @@ export default function App() {
   const submit = useCallback(
     (motivo: MotivoConsegna) => {
       if (!verifica || !session.answers || !session.studente) return;
-      const esito = gradeVerifica(verifica, session.answers, session.studente, motivo);
+      const startedAt = session.startedAt ? new Date(session.startedAt) : undefined;
+      const esito = gradeVerifica(verifica, session.answers, session.studente, motivo, new Date(), startedAt);
       setEsito(esito);
     },
-    [verifica, session.answers, session.studente, setEsito]
+    [verifica, session.answers, session.studente, session.startedAt, setEsito]
   );
 
   // Auto-recupero: se la sessione è in 'test' ma scaduta, forza consegna timeout

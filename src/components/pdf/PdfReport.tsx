@@ -1,6 +1,7 @@
 import { Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer';
 import type { EsitoFinale } from '../../types/domain';
 import { ETICHETTE_VLSM, ETICHETTE_PARAMETRI, ETICHETTE_RESIDUI } from '../../lib/grading';
+import { formatDuration, formatTimeOfDay } from '../../lib/format';
 
 Font.registerHyphenationCallback((word) => [word]);
 
@@ -28,8 +29,17 @@ const styles = StyleSheet.create({
   meta: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginBottom: 6,
+    fontSize: 9,
+  },
+  tempi: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginBottom: 10,
     fontSize: 9,
+    padding: 6,
+    backgroundColor: '#f3f4f7',
+    borderRadius: 3,
   },
   votoBox: {
     backgroundColor: '#0b3d91',
@@ -147,6 +157,18 @@ export function PdfReport({ esito }: Props) {
             Classe: <Text style={{ fontWeight: 'bold' }}>{esito.studente.classe}</Text>
           </Text>
           <Text>Data: {esito.data}</Text>
+        </View>
+
+        <View style={styles.tempi}>
+          <Text>
+            Inizio: <Text style={{ fontWeight: 'bold' }}>{formatTimeOfDay(esito.startedAt)}</Text>
+          </Text>
+          <Text>
+            Fine: <Text style={{ fontWeight: 'bold' }}>{formatTimeOfDay(esito.consegnatoAt)}</Text>
+          </Text>
+          <Text>
+            Durata: <Text style={{ fontWeight: 'bold' }}>{formatDuration(esito.durataMs)}</Text>
+          </Text>
         </View>
 
         <View style={styles.votoBox}>

@@ -465,11 +465,14 @@ export function gradeVerifica(
   r: RispostaStudente,
   studente: DatiStudente,
   motivoConsegna: MotivoConsegna,
-  dataConsegna: Date = new Date()
+  dataConsegna: Date = new Date(),
+  startedAt?: Date
 ): EsitoFinale {
   const esercizi = v.esercizi.map((e) => gradeEsercizio(e, r.esercizi[e.id]));
   const voto30 = Math.round(esercizi.reduce((s, e) => s + e.punteggio, 0) * 10) / 10;
   const voto10 = Math.round((voto30 / 3) * 10) / 10;
+  const inizio = startedAt ?? dataConsegna;
+  const durataMs = Math.max(0, dataConsegna.getTime() - inizio.getTime());
   return {
     verificaId: v.id,
     verificaTitolo: v.titolo,
@@ -478,7 +481,9 @@ export function gradeVerifica(
     esercizi,
     voto30,
     voto10,
+    startedAt: inizio.toISOString(),
     consegnatoAt: dataConsegna.toISOString(),
+    durataMs,
     motivoConsegna,
   };
 }

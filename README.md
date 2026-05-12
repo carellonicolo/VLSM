@@ -105,4 +105,4 @@ Le **soluzioni attese** non sono memorizzate: vengono calcolate al volo dalla li
 
 ## Sorgenti didattici
 
-I file `verifica_vlsm_*.md` e `soluzioni_vlsm_completo.md` restano nel repo come riferimento del rubric originale. Non vengono usati a runtime.
+I file in `docs/` (`verifica_vlsm_*.md`, `verifica_vlsm.docx`, `soluzioni_vlsm.docx`, `soluzioni_vlsm_completo.md`) restano nel repo come riferimento del rubric originale. Non vengono usati a runtime.

@@ -1,6 +1,7 @@
 import { lazy, Suspense, useState } from 'react';
 import type { EsitoFinale } from '../../types/domain';
 import { ETICHETTE_VLSM, ETICHETTE_PARAMETRI, ETICHETTE_RESIDUI } from '../../lib/grading';
+import { formatDuration, formatTimeOfDay } from '../../lib/format';
 
 const PdfDownload = lazy(() => import('../pdf/PdfDownload').then((m) => ({ default: m.PdfDownload })));
 
@@ -32,6 +33,21 @@ export function ResultScreen({ esito, onNuovaSessione }: Props) {
             ⏱ Consegna automatica per scadenza del tempo
           </div>
         )}
+      </div>
+
+      <div className="card" style={{ display: 'flex', justifyContent: 'space-around', textAlign: 'center', padding: '0.75rem' }}>
+        <div>
+          <div className="muted" style={{ fontSize: '0.8rem' }}>Inizio</div>
+          <strong>{formatTimeOfDay(esito.startedAt)}</strong>
+        </div>
+        <div>
+          <div className="muted" style={{ fontSize: '0.8rem' }}>Fine</div>
+          <strong>{formatTimeOfDay(esito.consegnatoAt)}</strong>
+        </div>
+        <div>
+          <div className="muted" style={{ fontSize: '0.8rem' }}>Durata</div>
+          <strong>{formatDuration(esito.durataMs)}</strong>
+        </div>
       </div>
 
       <div className="card">
