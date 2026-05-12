@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useSession } from './hooks/useSession';
 import { LoginScreen } from './components/screens/LoginScreen';
 import { StudentInfoScreen } from './components/screens/StudentInfoScreen';
@@ -11,9 +11,13 @@ import { getVerifica } from './data/verifiche';
 import { gradeVerifica } from './lib/grading';
 import type { MotivoConsegna } from './types/domain';
 
+const AdminScreen = lazy(() => import('./components/admin/AdminScreen').then((m) => ({ default: m.AdminScreen })));
+
+type AppMode = 'login' | 'student' | 'admin';
+
 export default function App() {
   const { session, startTest, updateRiga, updateParteC, goPhase, setEsito, reset, setCategoria } = useSession();
-  const [loggedIn, setLoggedIn] = useState(false);
+  const [mode, setMode] = useState<AppMode>('login');
 
   const verifica = useMemo(() => (session.verificaId ? getVerifica(session.verificaId) : undefined), [session.verificaId]);
   const categoria = session.categoria ?? 'verifica';
@@ -34,24 +38,33 @@ export default function App() {
     }
   }, [session.phase, session.deadlineMs, submit]);
 
-  // Login screen visibile solo se non loggato come "verifica". In esercitazione
-  // si entra direttamente senza login.
-  const needsLogin = !loggedIn && categoria === 'verifica' && session.phase !== 'result';
-
-  if (needsLogin) {
+  if (mode === 'login' && session.phase !== 'result') {
     return (
       <div className="shell">
         <Header />
         <LoginScreen
           onSuccess={() => {
             setCategoria('verifica');
-            setLoggedIn(true);
+            setMode('student');
           }}
           onEsercitazione={() => {
             setCategoria('esercitazione');
-            setLoggedIn(true);
+            setMode('student');
           }}
+          onAdmin={() => setMode('admin')}
         />
+        <Footer />
+      </div>
+    );
+  }
+
+  if (mode === 'admin') {
+    return (
+      <div className="shell">
+        <Header />
+        <Suspense fallback={<div className="card">Caricamento modalità docente…</div>}>
+          <AdminScreen onExit={() => setMode('login')} />
+        </Suspense>
         <Footer />
       </div>
     );
@@ -110,7 +123,7 @@ export default function App() {
     return (
       <div className="shell">
         <Header />
-        <ResultScreen esito={session.esito} onNuovaSessione={reset} />
+        <ResultScreen esito={session.esito} onNuovaSessione={() => { reset(); setMode('login'); }} />
         <Footer />
       </div>
     );

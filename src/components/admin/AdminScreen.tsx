@@ -1,0 +1,158 @@
+import { lazy, Suspense, useMemo, useState } from 'react';
+import { parseMultiple, toCsv, downloadCsv, type ParsedFile } from '../../lib/pdfBulk';
+import type { EsitoSommario } from '../../lib/pdfData';
+import { PDFDownloadLink } from '@react-pdf/renderer';
+
+const AdminReportPdf = lazy(() => import('./AdminReportPdf').then((m) => ({ default: m.AdminReportPdf })));
+
+interface Props {
+  onExit: () => void;
+}
+
+export function AdminScreen({ onExit }: Props) {
+  const [parsing, setParsing] = useState(false);
+  const [parsed, setParsed] = useState<ParsedFile[]>([]);
+
+  const ok = useMemo(() => parsed.filter((p) => p.sommario).map((p) => p.sommario!), [parsed]);
+  const errors = useMemo(() => parsed.filter((p) => p.error), [parsed]);
+  const verifiche = useMemo(() => ok.filter((s) => s.categoria === 'verifica'), [ok]);
+  const esercitazioni = useMemo(() => ok.filter((s) => s.categoria === 'esercitazione'), [ok]);
+
+  const onFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setParsing(true);
+    const results = await parseMultiple(Array.from(files));
+    setParsed((prev) => [...prev, ...results]);
+    setParsing(false);
+  };
+
+  const onDragOver = (e: React.DragEvent) => { e.preventDefault(); };
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const dropped = Array.from(e.dataTransfer.files).filter((f) => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'));
+    if (dropped.length > 0) onFiles(dropped as unknown as FileList);
+  };
+
+  const clearAll = () => setParsed([]);
+
+  return (
+    <>
+      <div className="test-header-bar">
+        <h2 style={{ margin: 0 }}>📊 Modalità docente — correzione bulk</h2>
+        <button className="btn btn-secondary" type="button" onClick={onExit}>Esci</button>
+      </div>
+
+      <div className="card">
+        <h3 style={{ marginTop: 0 }}>Carica le consegne PDF degli studenti</h3>
+        <p className="muted">
+          Trascina i file PDF generati dall'app (oppure clicca per selezionarli). Il parser legge i dati incorporati nei metadati del PDF e aggrega i risultati.
+        </p>
+        <label
+          onDragOver={onDragOver}
+          onDrop={onDrop}
+          style={{
+            display: 'block',
+            border: '2px dashed var(--border)',
+            borderRadius: 8,
+            padding: '2rem',
+            textAlign: 'center',
+            cursor: 'pointer',
+            background: '#fafbfc',
+          }}
+        >
+          <input
+            type="file"
+            accept="application/pdf,.pdf"
+            multiple
+            onChange={(e) => onFiles(e.target.files)}
+            style={{ display: 'none' }}
+          />
+          <strong>📂 Trascina i PDF qui</strong>
+          <div className="muted" style={{ marginTop: '0.5rem' }}>oppure clicca per scegliere uno o più file</div>
+        </label>
+        {parsing && <p className="muted" style={{ marginTop: '0.5rem' }}>⏳ Parsing in corso…</p>}
+        {parsed.length > 0 && (
+          <div className="actions" style={{ marginTop: '1rem' }}>
+            <button className="btn btn-secondary" type="button" onClick={clearAll}>Svuota lista</button>
+            <button
+              className="btn"
+              type="button"
+              onClick={() => downloadCsv(`report_vlsm_${new Date().toISOString().slice(0, 10)}.csv`, toCsv(ok))}
+              disabled={ok.length === 0}
+            >
+              📥 Scarica CSV
+            </button>
+            <Suspense fallback={<button className="btn" disabled>Caricamento…</button>}>
+              <PDFDownloadLink
+                document={<AdminReportPdf verifiche={verifiche} esercitazioni={esercitazioni} />}
+                fileName={`report_vlsm_${new Date().toISOString().slice(0, 10)}.pdf`}
+              >
+                {({ loading }) => (
+                  <button className="btn" type="button" disabled={loading || ok.length === 0}>
+                    {loading ? 'Generazione…' : '📄 Scarica PDF riepilogo'}
+                  </button>
+                )}
+              </PDFDownloadLink>
+            </Suspense>
+          </div>
+        )}
+      </div>
+
+      {errors.length > 0 && (
+        <div className="card" style={{ background: '#ffe6e1', borderColor: '#c0392b' }}>
+          <h3 style={{ marginTop: 0, color: '#c0392b' }}>File non riconosciuti ({errors.length})</h3>
+          <ul style={{ margin: 0 }}>
+            {errors.map((e, i) => (
+              <li key={i}><code>{e.filename}</code> — {e.error}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {verifiche.length > 0 && <SezioneTabella titolo={`Verifiche ufficiali (${verifiche.length})`} rows={verifiche} />}
+      {esercitazioni.length > 0 && <SezioneTabella titolo={`Esercitazioni libere (${esercitazioni.length})`} rows={esercitazioni} esercitazione />}
+
+      {parsed.length > 0 && ok.length === 0 && (
+        <div className="card muted">Nessun PDF valido caricato finora.</div>
+      )}
+    </>
+  );
+}
+
+function SezioneTabella({ titolo, rows, esercitazione = false }: { titolo: string; rows: EsitoSommario[]; esercitazione?: boolean }) {
+  return (
+    <div className="card">
+      <h3 style={{ marginTop: 0, color: esercitazione ? '#7c5d00' : 'var(--primary)' }}>{titolo}</h3>
+      <div style={{ overflowX: 'auto' }}>
+        <table className="result-table">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Classe</th>
+              <th>Verifica</th>
+              <th>Voto /30</th>
+              <th>Voto /10</th>
+              <th>Durata</th>
+              <th>Consegna</th>
+              <th>Modalità</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r, i) => (
+              <tr key={i}>
+                <td>{r.nome}</td>
+                <td>{r.classe}</td>
+                <td>{r.verificaTitolo}</td>
+                <td><strong>{r.voto30}</strong></td>
+                <td>{r.voto10}</td>
+                <td>{Math.round(r.durataMs / 60000)} min</td>
+                <td>{new Date(r.consegnatoAt).toLocaleString('it-IT')}</td>
+                <td>{r.motivoConsegna}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}

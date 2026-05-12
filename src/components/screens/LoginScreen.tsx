@@ -3,19 +3,22 @@ import { useState } from 'react';
 interface Props {
   onSuccess: () => void;
   onEsercitazione: () => void;
+  onAdmin: () => void;
 }
 
 const PASSWORD = import.meta.env.VITE_APP_PASSWORD ?? 'vlsm2026';
 
-export function LoginScreen({ onSuccess, onEsercitazione }: Props) {
+export function LoginScreen({ onSuccess, onEsercitazione, onAdmin }: Props) {
   const [pwd, setPwd] = useState('');
   const [error, setError] = useState(false);
+  const [mode, setMode] = useState<'verifica' | 'admin'>('verifica');
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (pwd === PASSWORD) {
       setError(false);
-      onSuccess();
+      if (mode === 'admin') onAdmin();
+      else onSuccess();
     } else {
       setError(true);
     }
@@ -38,8 +41,16 @@ export function LoginScreen({ onSuccess, onEsercitazione }: Props) {
           />
           {error && <div className="error-msg">Password non valida.</div>}
         </div>
-        <button className="btn" type="submit" style={{ width: '100%' }}>
+        <button className="btn" type="submit" onClick={() => setMode('verifica')} style={{ width: '100%' }}>
           Entra nella verifica
+        </button>
+        <button
+          className="btn btn-secondary"
+          type="submit"
+          onClick={() => setMode('admin')}
+          style={{ width: '100%', marginTop: '0.5rem' }}
+        >
+          📊 Modalità docente (correzione bulk)
         </button>
       </form>
 
