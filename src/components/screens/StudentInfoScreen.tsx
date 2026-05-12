@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import type { DatiStudente, VerificaId } from '../../types/domain';
+import type { DatiStudente, Difficolta, VerificaId } from '../../types/domain';
+import { DIFFICOLTA_ORDER } from '../../types/domain';
 import { pickVerifica } from '../../lib/pickVerifica';
+import { verificheByDifficolta } from '../../data/verifiche';
 
 interface Props {
   durataMin: number;
@@ -14,13 +16,14 @@ export function StudentInfoScreen({ durataMin, onStart }: Props) {
   const [nome, setNome] = useState('');
   const [classe, setClasse] = useState('');
   const [durata, setDurata] = useState(DURATA_BLOCCATA ?? durataMin);
+  const [difficolta, setDifficolta] = useState<Difficolta>('Base');
 
   const valid = nome.trim().length >= 2 && classe.trim().length >= 1 && durata > 0;
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!valid) return;
-    const verificaId = pickVerifica();
+    const verificaId = pickVerifica(difficolta);
     onStart({ nome: nome.trim(), classe: classe.trim() }, verificaId, DURATA_BLOCCATA ?? durata);
   };
 
@@ -40,21 +43,41 @@ export function StudentInfoScreen({ durataMin, onStart }: Props) {
           <input id="classe" type="text" value={classe} onChange={(e) => setClasse(e.target.value)} placeholder="es. 5A SRI" />
         </div>
       </div>
-      <div className="field">
-        <label htmlFor="durata">
-          Durata (minuti)
-          {DURATA_BLOCCATA !== null && <span className="muted" style={{ marginLeft: '0.5rem', fontWeight: 400 }}>— impostata dal docente</span>}
-        </label>
-        <input
-          id="durata"
-          type="number"
-          min={5}
-          max={180}
-          value={DURATA_BLOCCATA ?? durata}
-          onChange={(e) => setDurata(Number(e.target.value))}
-          readOnly={DURATA_BLOCCATA !== null}
-          disabled={DURATA_BLOCCATA !== null}
-        />
+      <div className="field-row">
+        <div className="field">
+          <label htmlFor="difficolta">Livello di difficoltà</label>
+          <select
+            id="difficolta"
+            value={difficolta}
+            onChange={(e) => setDifficolta(e.target.value as Difficolta)}
+            style={{ width: '100%', padding: '0.5rem 0.7rem', border: '1px solid var(--border)', borderRadius: 5, fontSize: '0.95rem', fontFamily: 'inherit', background: 'white' }}
+          >
+            {DIFFICOLTA_ORDER.map((d) => {
+              const count = verificheByDifficolta(d).length;
+              return (
+                <option key={d} value={d}>
+                  {d} ({count} verific{count === 1 ? 'a' : 'he'})
+                </option>
+              );
+            })}
+          </select>
+        </div>
+        <div className="field">
+          <label htmlFor="durata">
+            Durata (minuti)
+            {DURATA_BLOCCATA !== null && <span className="muted" style={{ marginLeft: '0.5rem', fontWeight: 400 }}>— impostata dal docente</span>}
+          </label>
+          <input
+            id="durata"
+            type="number"
+            min={5}
+            max={180}
+            value={DURATA_BLOCCATA ?? durata}
+            onChange={(e) => setDurata(Number(e.target.value))}
+            readOnly={DURATA_BLOCCATA !== null}
+            disabled={DURATA_BLOCCATA !== null}
+          />
+        </div>
       </div>
       <button className="btn" type="submit" disabled={!valid} style={{ width: '100%' }}>
         Sorteggia verifica e inizia

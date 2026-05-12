@@ -15,6 +15,24 @@ import {
   findResidualBlocks,
 } from '../lib/vlsm';
 
+describe('parteB.numeroRighe matches actual residual count', () => {
+  for (const v of VERIFICHE) {
+    for (const es of v.esercizi) {
+      if (es.tipo === 'analisi-piano') {
+        it(`${v.id}/${es.id}: numeroRighe coerente con findResidualBlocks`, () => {
+          const parent = parseCidr(es.bloccoPadre);
+          const allocated = es.parteA.righe.map((r) => ({
+            net: networkAddress(parseIp(r.indRete), r.prefisso),
+            prefix: r.prefisso,
+          }));
+          const residui = findResidualBlocks({ net: parent.ip, prefix: parent.prefix }, allocated);
+          expect(es.parteB.numeroRighe).toBe(residui.length);
+        });
+      }
+    }
+  }
+});
+
 function buildPerfectAnswers(verificaId: string): RispostaStudente {
   const v = VERIFICHE.find((x) => x.id === verificaId)!;
   const esercizi: RispostaStudente['esercizi'] = {};
