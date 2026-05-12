@@ -109,4 +109,17 @@ Le **soluzioni attese** non sono memorizzate: vengono calcolate al volo dalla li
 
 ## Sorgenti didattici
 
-I file in `docs/` (`verifica_vlsm_*.md`, `verifica_vlsm.docx`, `soluzioni_vlsm.docx`, `soluzioni_vlsm_completo.md`) restano nel repo come riferimento del rubric originale. Non vengono usati a runtime.
+I file in `docs/` (`verifica_vlsm_1..16.md`, `verifica_vlsm.docx`, `soluzioni_vlsm.docx`, `soluzioni_vlsm_completo.md`) restano nel repo come riferimento del rubric originale. Non vengono usati a runtime.
+
+I file `verifica_vlsm_7.md` ... `verifica_vlsm_16.md` sono generati automaticamente da `scripts/generate-md.ts` (`npx tsx scripts/generate-md.ts`) a partire dal dataset in `src/data/verifiche.ts`.
+
+## Livelli di difficoltà
+
+Le 16 verifiche sono distribuite su 4 livelli (4 verifiche ciascuno). Lo studente seleziona il livello da un menù a tendina prima di iniziare; il sorteggio avviene **all'interno del livello scelto**.
+
+| Livello | Verifiche | Caratteristiche |
+|---------|-----------|------------------|
+| Base | v1, v2, v7, v8 | Reti /22–/24, host < 200 |
+| Media | v3, v5, v10, v11 | Reti /20–/22, host < 1000 |
+| Alta | v4, v9, v12, v13 | Reti /16–/19, host fino a 10.000, AND su 3° ottetto |
+| Esperta | v6, v14, v15, v16 | Reti /11–/14, host fino a 250.000, AND su 2° ottetto |
