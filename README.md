@@ -31,7 +31,8 @@ npm run preview    # preview del build di produzione
 Crea un file `.env.local` (o configura le env var su Cloudflare):
 
 ```
-VITE_APP_PASSWORD=vlsm2026
+VITE_APP_PASSWORD=vlsm2026          # password studente per svolgere le verifiche
+VITE_ADMIN_PASSWORD=docente2026     # password docente per la correzione bulk
 VITE_DURATA_DEFAULT_MIN=60
 ```
 
@@ -39,7 +40,7 @@ VITE_DURATA_DEFAULT_MIN=60
 - `VITE_DURATA_DEFAULT_MIN=0` (o non impostata) → lo studente può scegliere liberamente la durata prima di iniziare (default mostrato: 60 min).
 - `VITE_DURATA_DEFAULT_MIN=N` con `N>0` → il campo durata è visibile ma **bloccato** sul valore `N`. Lo studente non può modificarlo. Per cambiarlo: aggiorni la env var su Cloudflare e fai un nuovo deploy.
 
-> **Attenzione**: la password viene inlined nel bundle JS a build-time. È una barriera "soft", non sicurezza reale.
+> **Attenzione**: entrambe le password (`VITE_APP_PASSWORD` e `VITE_ADMIN_PASSWORD`) vengono inlined nel bundle JS a build-time. Sono una barriera "soft", non sicurezza reale. Tieni la password docente diversa da quella studente per non far entrare gli studenti nella modalità di correzione.
 
 ## Deploy su Cloudflare Pages
 
@@ -53,8 +54,10 @@ VITE_DURATA_DEFAULT_MIN=60
    - **Build output directory**: `dist`
    - **Root directory**: `/` (lascia vuoto)
 4. **Environment variables** (sia Production che Preview):
-   - `VITE_APP_PASSWORD` = la password che vuoi distribuire agli studenti
+   - `VITE_APP_PASSWORD` = password che dai agli studenti per la verifica
+   - `VITE_ADMIN_PASSWORD` = password separata che usi tu per la correzione bulk
    - `VITE_DURATA_DEFAULT_MIN` = `60` (o altro valore di default)
+   - `VLSM_HMAC_SECRET` = secret server-side per firma HMAC (vedi sezione "Firma digitale" sotto). Tipo: **Secret**.
    - `NODE_VERSION` = `20`
 5. **Deploy**. Al primo build Cloudflare crea l'URL `https://vlsm.pages.dev` (puoi anche collegare un dominio personalizzato).
 

@@ -126,6 +126,29 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
+  signatureBox: {
+    marginTop: 14,
+    padding: 8,
+    borderWidth: 0.7,
+    borderColor: '#1f7a3c',
+    borderStyle: 'solid',
+    backgroundColor: '#e6f5ec',
+    borderRadius: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  signatureCheck: {
+    fontSize: 14,
+    color: '#1f7a3c',
+    fontWeight: 'bold',
+    marginRight: 6,
+  },
+  signatureText: {
+    fontSize: 9,
+    color: '#1f7a3c',
+    fontWeight: 'bold',
+  },
   firmaBox: {
     width: '45%',
   },
@@ -182,7 +205,7 @@ export function PdfReport({ esito }: Props) {
           ITIS G. Marconi — Verona | Sistemi e Reti (SRI) | Prof. N. Carello | A.S. 2025/2026
         </Text>
         <Text style={styles.title}>
-          {esito.categoria === 'esercitazione' ? `${esito.verificaTitolo} — Esercitazione (autocorrezione)` : `${esito.verificaTitolo} — Correzione automatica`}
+          {esito.categoria === 'esercitazione' ? `${esito.verificaTitolo} — Esercitazione` : `${esito.verificaTitolo} — Correzione`}
         </Text>
         {esito.categoria === 'esercitazione' && (
           <Text style={styles.bannerEsercitazione}>
@@ -283,6 +306,13 @@ export function PdfReport({ esito }: Props) {
               <Text style={styles.firmaLabel}>Firma docente:</Text>
               <View style={styles.firmaLine} />
             </View>
+          </View>
+        )}
+
+        {esito.signature && (
+          <View style={styles.signatureBox} wrap={false}>
+            <Text style={styles.signatureCheck}>✓</Text>
+            <Text style={styles.signatureText}>Firmata digitalmente — copia conforme all'originale</Text>
           </View>
         )}
 

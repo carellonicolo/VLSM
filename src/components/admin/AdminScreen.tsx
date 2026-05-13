@@ -1,9 +1,6 @@
-import { lazy, Suspense, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { parseMultiple, toCsv, downloadCsv, type ParsedFile } from '../../lib/pdfBulk';
 import type { VerifyStatus } from '../../lib/pdfSign';
-import { PDFDownloadLink } from '@react-pdf/renderer';
-
-const AdminReportPdf = lazy(() => import('./AdminReportPdf').then((m) => ({ default: m.AdminReportPdf })));
 
 interface Props {
   onExit: () => void;
@@ -49,6 +46,8 @@ function badgeLabel(status: VerifyStatus | undefined): string {
 export function AdminScreen({ onExit }: Props) {
   const [parsing, setParsing] = useState(false);
   const [parsed, setParsed] = useState<ParsedFile[]>([]);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
 
   const ok = useMemo(() => parsed.filter((p) => p.sommario), [parsed]);
   const okSommari = useMemo(() => ok.map((p) => p.sommario!), [ok]);
@@ -80,7 +79,41 @@ export function AdminScreen({ onExit }: Props) {
     if (dropped.length > 0) onFiles(dropped as unknown as FileList);
   };
 
-  const clearAll = () => setParsed([]);
+  const clearAll = () => {
+    setParsed([]);
+    setPdfError(null);
+  };
+
+  const downloadReportPdf = async () => {
+    if (ok.length === 0) return;
+    setGeneratingPdf(true);
+    setPdfError(null);
+    try {
+      const { pdf } = await import('@react-pdf/renderer');
+      const { AdminReportPdf } = await import('./AdminReportPdf');
+      const blob = await pdf(
+        <AdminReportPdf
+          verifiche={verifiche.map((p) => p.sommario!)}
+          esercitazioni={esercitazioni.map((p) => p.sommario!)}
+        />
+      ).toBlob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `report_vlsm_${new Date().toISOString().slice(0, 10)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setPdfError(`Errore nella generazione del PDF: ${msg}`);
+      // eslint-disable-next-line no-console
+      console.error('PDF report generation failed', e);
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
 
   return (
     <>
@@ -130,19 +163,16 @@ export function AdminScreen({ onExit }: Props) {
               >
                 📥 Scarica CSV
               </button>
-              <Suspense fallback={<button className="btn" disabled>Caricamento…</button>}>
-                <PDFDownloadLink
-                  document={<AdminReportPdf verifiche={verifiche.map((p) => p.sommario!)} esercitazioni={esercitazioni.map((p) => p.sommario!)} />}
-                  fileName={`report_vlsm_${new Date().toISOString().slice(0, 10)}.pdf`}
-                >
-                  {({ loading }) => (
-                    <button className="btn" type="button" disabled={loading || ok.length === 0}>
-                      {loading ? 'Generazione…' : '📄 Scarica PDF riepilogo'}
-                    </button>
-                  )}
-                </PDFDownloadLink>
-              </Suspense>
+              <button
+                className="btn"
+                type="button"
+                onClick={downloadReportPdf}
+                disabled={ok.length === 0 || generatingPdf}
+              >
+                {generatingPdf ? 'Generazione PDF…' : '📄 Scarica PDF riepilogo'}
+              </button>
             </div>
+            {pdfError && <div className="error-msg" style={{ marginTop: '0.5rem' }}>{pdfError}</div>}
             <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
               {stats.valid > 0 && <span style={badgeStyle('valid')}>✅ {stats.valid} firma valida</span>}
               {stats.invalid > 0 && <span style={badgeStyle('invalid')}>❌ {stats.invalid} manomessi</span>}
