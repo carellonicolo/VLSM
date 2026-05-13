@@ -9,6 +9,8 @@ import { Header } from './components/ui/Header';
 import { Footer } from './components/ui/Footer';
 import { getVerifica } from './data/verifiche';
 import { gradeVerifica } from './lib/grading';
+import { buildSommario } from './lib/pdfData';
+import { signSommario } from './lib/pdfSign';
 import type { MotivoConsegna } from './types/domain';
 
 const AdminScreen = lazy(() => import('./components/admin/AdminScreen').then((m) => ({ default: m.AdminScreen })));
@@ -22,12 +24,19 @@ export default function App() {
   const verifica = useMemo(() => (session.verificaId ? getVerifica(session.verificaId) : undefined), [session.verificaId]);
   const categoria = session.categoria ?? 'verifica';
 
+  const [signing, setSigning] = useState(false);
   const submit = useCallback(
-    (motivo: MotivoConsegna) => {
+    async (motivo: MotivoConsegna) => {
       if (!verifica || !session.answers || !session.studente) return;
       const startedAt = session.startedAt ? new Date(session.startedAt) : undefined;
       const esito = gradeVerifica(verifica, session.answers, session.studente, motivo, new Date(), startedAt);
-      setEsito(esito);
+      setSigning(true);
+      const sig = await signSommario(buildSommario(esito));
+      setSigning(false);
+      const finalEsito = sig
+        ? { ...esito, signature: sig.signature, signedAt: sig.signedAt }
+        : esito;
+      setEsito(finalEsito);
     },
     [verifica, session.answers, session.studente, session.startedAt, setEsito]
   );
@@ -111,8 +120,9 @@ export default function App() {
         <ReviewScreen
           verifica={verifica}
           answers={session.answers}
-          onConferma={() => submit('volontaria')}
+          onConferma={() => { void submit('volontaria'); }}
           onIndietro={() => goPhase('test')}
+          signing={signing}
         />
         <Footer />
       </div>

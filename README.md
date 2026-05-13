@@ -75,7 +75,44 @@ Per le env var aggiungile dal dashboard o con `wrangler pages secret put`.
 
 - `public/_redirects` (`/* /index.html 200`) gestisce il routing client-side.
 - `public/_headers` imposta header di sicurezza base (no CSP rigida, perché `@react-pdf/renderer` ne richiede flessibilità).
-- Il PDF è lazy-loaded (`React.lazy`): il bundle iniziale è ~184 KB gzip (56 KB main + ~493 KB il chunk PDF caricato solo nella schermata risultato).
+- Il PDF è lazy-loaded (`React.lazy`): il bundle iniziale è ~62 KB gzip; il chunk PDF (`react-pdf`) viene scaricato solo a fine verifica.
+
+### Firma digitale HMAC (Pages Functions)
+
+L'app firma ogni PDF con `HMAC-SHA256` server-side per garantirne l'integrità:
+
+- Quando lo studente conferma la consegna, il frontend chiama `POST /api/sign` con il riassunto dell'esito; la Function calcola la firma usando un **secret server-side** (`VLSM_HMAC_SECRET`) e la restituisce
+- La firma + il payload vengono incorporati nei metadati PDF (`Subject`/`Keywords`)
+- Quando il docente carica i PDF in modalità admin, il frontend chiama `POST /api/verify` per ogni file e mostra un badge "✅ Firma valida", "❌ Manomesso" o "⚠️ Non firmato"
+
+**Configurazione Cloudflare (obbligatoria per usare la firma):**
+
+1. Genera un secret random lungo almeno 32 caratteri:
+   ```bash
+   openssl rand -base64 48
+   ```
+2. Cloudflare Dashboard → progetto `vlsm` → **Settings** → **Environment variables** → aggiungi (sia Production che Preview):
+   - **Variable name**: `VLSM_HMAC_SECRET`
+   - **Value**: il secret generato
+   - **Type**: **Secret** (cliccando "Encrypt" non viene esposta nei deploy log)
+3. Redeploy. Le Functions sono in `functions/api/` e vengono compilate automaticamente da Pages.
+
+**Senza il secret**, le API rispondono 500 e il flusso degrada: i PDF vengono comunque generati ma senza firma (badge "⚠️ Non firmato" in admin).
+
+**Costo**: ben sotto il free tier di Cloudflare (100k req/giorno + 10ms CPU). Per dettagli: vedi README sezione sviluppo.
+
+### Sviluppo locale con Pages Functions
+
+Per testare le API in locale serve `wrangler`:
+
+```bash
+npm install -g wrangler   # una sola volta
+wrangler pages dev dist --port 8788 --binding VLSM_HMAC_SECRET=dev-secret-only-for-local
+# in un altro terminale:
+npm run dev               # Vite proxierà /api → :8788
+```
+
+In dev senza wrangler le API sono offline → i PDF vengono generati senza firma (badge "⚠️ Non firmato").
 
 ## Struttura
 

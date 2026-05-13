@@ -1,6 +1,6 @@
 import { lazy, Suspense, useMemo, useState } from 'react';
 import { parseMultiple, toCsv, downloadCsv, type ParsedFile } from '../../lib/pdfBulk';
-import type { EsitoSommario } from '../../lib/pdfData';
+import type { VerifyStatus } from '../../lib/pdfSign';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 
 const AdminReportPdf = lazy(() => import('./AdminReportPdf').then((m) => ({ default: m.AdminReportPdf })));
@@ -9,14 +9,61 @@ interface Props {
   onExit: () => void;
 }
 
+function badgeStyle(status: VerifyStatus | undefined): React.CSSProperties {
+  const base: React.CSSProperties = {
+    display: 'inline-block',
+    padding: '0.15rem 0.5rem',
+    borderRadius: 999,
+    fontSize: '0.7rem',
+    fontWeight: 600,
+    whiteSpace: 'nowrap',
+  };
+  switch (status) {
+    case 'valid':
+      return { ...base, background: '#e6f5ec', color: '#1f7a3c' };
+    case 'invalid':
+      return { ...base, background: '#ffe6e1', color: '#c0392b' };
+    case 'unsigned':
+      return { ...base, background: '#fff3c4', color: '#7c5d00' };
+    case 'unavailable':
+    default:
+      return { ...base, background: '#eef1f7', color: '#6b7280' };
+  }
+}
+
+function badgeLabel(status: VerifyStatus | undefined): string {
+  switch (status) {
+    case 'valid':
+      return '✅ Firma valida';
+    case 'invalid':
+      return '❌ Manomesso';
+    case 'unsigned':
+      return '⚠️ Non firmato';
+    case 'unavailable':
+      return '⏳ API non disponibile';
+    default:
+      return '—';
+  }
+}
+
 export function AdminScreen({ onExit }: Props) {
   const [parsing, setParsing] = useState(false);
   const [parsed, setParsed] = useState<ParsedFile[]>([]);
 
-  const ok = useMemo(() => parsed.filter((p) => p.sommario).map((p) => p.sommario!), [parsed]);
+  const ok = useMemo(() => parsed.filter((p) => p.sommario), [parsed]);
+  const okSommari = useMemo(() => ok.map((p) => p.sommario!), [ok]);
   const errors = useMemo(() => parsed.filter((p) => p.error), [parsed]);
-  const verifiche = useMemo(() => ok.filter((s) => s.categoria === 'verifica'), [ok]);
-  const esercitazioni = useMemo(() => ok.filter((s) => s.categoria === 'esercitazione'), [ok]);
+  const verifiche = useMemo(() => ok.filter((p) => p.sommario!.categoria === 'verifica'), [ok]);
+  const esercitazioni = useMemo(() => ok.filter((p) => p.sommario!.categoria === 'esercitazione'), [ok]);
+
+  const stats = useMemo(() => {
+    const r = { valid: 0, invalid: 0, unsigned: 0, unavailable: 0 };
+    for (const p of ok) {
+      const s = p.verify ?? 'unavailable';
+      r[s as keyof typeof r]++;
+    }
+    return r;
+  }, [ok]);
 
   const onFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -45,7 +92,7 @@ export function AdminScreen({ onExit }: Props) {
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Carica le consegne PDF degli studenti</h3>
         <p className="muted">
-          Trascina i file PDF generati dall'app (oppure clicca per selezionarli). Il parser legge i dati incorporati nei metadati del PDF e aggrega i risultati.
+          Trascina i file PDF generati dall'app (oppure clicca per selezionarli). Il parser legge i dati incorporati nei metadati e verifica la firma HMAC contro l'API <code>/api/verify</code>.
         </p>
         <label
           onDragOver={onDragOver}
@@ -70,31 +117,39 @@ export function AdminScreen({ onExit }: Props) {
           <strong>📂 Trascina i PDF qui</strong>
           <div className="muted" style={{ marginTop: '0.5rem' }}>oppure clicca per scegliere uno o più file</div>
         </label>
-        {parsing && <p className="muted" style={{ marginTop: '0.5rem' }}>⏳ Parsing in corso…</p>}
+        {parsing && <p className="muted" style={{ marginTop: '0.5rem' }}>⏳ Parsing e verifica firme in corso…</p>}
         {parsed.length > 0 && (
-          <div className="actions" style={{ marginTop: '1rem' }}>
-            <button className="btn btn-secondary" type="button" onClick={clearAll}>Svuota lista</button>
-            <button
-              className="btn"
-              type="button"
-              onClick={() => downloadCsv(`report_vlsm_${new Date().toISOString().slice(0, 10)}.csv`, toCsv(ok))}
-              disabled={ok.length === 0}
-            >
-              📥 Scarica CSV
-            </button>
-            <Suspense fallback={<button className="btn" disabled>Caricamento…</button>}>
-              <PDFDownloadLink
-                document={<AdminReportPdf verifiche={verifiche} esercitazioni={esercitazioni} />}
-                fileName={`report_vlsm_${new Date().toISOString().slice(0, 10)}.pdf`}
+          <>
+            <div className="actions" style={{ marginTop: '1rem', flexWrap: 'wrap' }}>
+              <button className="btn btn-secondary" type="button" onClick={clearAll}>Svuota lista</button>
+              <button
+                className="btn"
+                type="button"
+                onClick={() => downloadCsv(`report_vlsm_${new Date().toISOString().slice(0, 10)}.csv`, toCsv(okSommari))}
+                disabled={ok.length === 0}
               >
-                {({ loading }) => (
-                  <button className="btn" type="button" disabled={loading || ok.length === 0}>
-                    {loading ? 'Generazione…' : '📄 Scarica PDF riepilogo'}
-                  </button>
-                )}
-              </PDFDownloadLink>
-            </Suspense>
-          </div>
+                📥 Scarica CSV
+              </button>
+              <Suspense fallback={<button className="btn" disabled>Caricamento…</button>}>
+                <PDFDownloadLink
+                  document={<AdminReportPdf verifiche={verifiche.map((p) => p.sommario!)} esercitazioni={esercitazioni.map((p) => p.sommario!)} />}
+                  fileName={`report_vlsm_${new Date().toISOString().slice(0, 10)}.pdf`}
+                >
+                  {({ loading }) => (
+                    <button className="btn" type="button" disabled={loading || ok.length === 0}>
+                      {loading ? 'Generazione…' : '📄 Scarica PDF riepilogo'}
+                    </button>
+                  )}
+                </PDFDownloadLink>
+              </Suspense>
+            </div>
+            <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              {stats.valid > 0 && <span style={badgeStyle('valid')}>✅ {stats.valid} firma valida</span>}
+              {stats.invalid > 0 && <span style={badgeStyle('invalid')}>❌ {stats.invalid} manomessi</span>}
+              {stats.unsigned > 0 && <span style={badgeStyle('unsigned')}>⚠️ {stats.unsigned} non firmati</span>}
+              {stats.unavailable > 0 && <span style={badgeStyle('unavailable')}>⏳ {stats.unavailable} firma non verificabile</span>}
+            </div>
+          </>
         )}
       </div>
 
@@ -119,7 +174,7 @@ export function AdminScreen({ onExit }: Props) {
   );
 }
 
-function SezioneTabella({ titolo, rows, esercitazione = false }: { titolo: string; rows: EsitoSommario[]; esercitazione?: boolean }) {
+function SezioneTabella({ titolo, rows, esercitazione = false }: { titolo: string; rows: ParsedFile[]; esercitazione?: boolean }) {
   return (
     <div className="card">
       <h3 style={{ marginTop: 0, color: esercitazione ? '#7c5d00' : 'var(--primary)' }}>{titolo}</h3>
@@ -127,6 +182,7 @@ function SezioneTabella({ titolo, rows, esercitazione = false }: { titolo: strin
         <table className="result-table">
           <thead>
             <tr>
+              <th>Firma</th>
               <th>Nome</th>
               <th>Classe</th>
               <th>Verifica</th>
@@ -138,18 +194,22 @@ function SezioneTabella({ titolo, rows, esercitazione = false }: { titolo: strin
             </tr>
           </thead>
           <tbody>
-            {rows.map((r, i) => (
-              <tr key={i}>
-                <td>{r.nome}</td>
-                <td>{r.classe}</td>
-                <td>{r.verificaTitolo}</td>
-                <td><strong>{r.voto30}</strong></td>
-                <td>{r.voto10}</td>
-                <td>{Math.round(r.durataMs / 60000)} min</td>
-                <td>{new Date(r.consegnatoAt).toLocaleString('it-IT')}</td>
-                <td>{r.motivoConsegna}</td>
-              </tr>
-            ))}
+            {rows.map((p, i) => {
+              const r = p.sommario!;
+              return (
+                <tr key={i} style={p.verify === 'invalid' ? { background: '#ffe6e1' } : undefined}>
+                  <td><span style={badgeStyle(p.verify)}>{badgeLabel(p.verify)}</span></td>
+                  <td>{r.nome}</td>
+                  <td>{r.classe}</td>
+                  <td>{r.verificaTitolo}</td>
+                  <td><strong>{r.voto30}</strong></td>
+                  <td>{r.voto10}</td>
+                  <td>{Math.round(r.durataMs / 60000)} min</td>
+                  <td>{new Date(r.consegnatoAt).toLocaleString('it-IT')}</td>
+                  <td>{r.motivoConsegna}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

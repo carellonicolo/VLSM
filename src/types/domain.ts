@@ -127,4 +127,6 @@ export interface EsitoFinale {
   consegnatoAt: string;
   durataMs: number;
   motivoConsegna: MotivoConsegna;
+  signature?: string;
+  signedAt?: string;
 }

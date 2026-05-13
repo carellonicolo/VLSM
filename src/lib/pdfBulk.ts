@@ -3,7 +3,8 @@ import * as pdfjsLib from 'pdfjs-dist';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-import { decodeSommario, type EsitoSommario } from './pdfData';
+import { decodeEnvelope, type EsitoSommario } from './pdfData';
+import { verifySignature, type VerifyStatus } from './pdfSign';
 
 // Configura worker una sola volta
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
@@ -11,6 +12,9 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 export interface ParsedFile {
   filename: string;
   sommario?: EsitoSommario;
+  signature?: string;
+  signedAt?: string;
+  verify?: VerifyStatus;
   error?: string;
 }
 
@@ -23,8 +27,15 @@ export async function parsePdf(file: File): Promise<ParsedFile> {
     const candidates = [info.Subject, info.Keywords, info.Title]
       .filter((v): v is string => typeof v === 'string');
     for (const c of candidates) {
-      const sommario = decodeSommario(c);
-      if (sommario) return { filename: file.name, sommario };
+      const env = decodeEnvelope(c);
+      if (env) {
+        return {
+          filename: file.name,
+          sommario: env.payload,
+          signature: env.signature,
+          signedAt: env.signedAt,
+        };
+      }
     }
     return { filename: file.name, error: 'Nessun token VLSM_DATA trovato nei metadati del PDF.' };
   } catch (e) {
@@ -34,7 +45,20 @@ export async function parsePdf(file: File): Promise<ParsedFile> {
 }
 
 export async function parseMultiple(files: File[]): Promise<ParsedFile[]> {
-  return Promise.all(files.map(parsePdf));
+  const parsed = await Promise.all(files.map(parsePdf));
+  // Verifica firma in parallelo (al massimo 8 in volo per non saturare la rete)
+  const targets = parsed.filter((p) => p.sommario);
+  const concurrency = 8;
+  let i = 0;
+  async function worker() {
+    while (i < targets.length) {
+      const idx = i++;
+      const t = targets[idx];
+      t.verify = await verifySignature(t.sommario!, t.signature);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(concurrency, targets.length) }, worker));
+  return parsed;
 }
 
 export function toCsv(rows: EsitoSommario[]): string {

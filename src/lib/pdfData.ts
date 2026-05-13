@@ -16,6 +16,13 @@ export interface EsitoSommario {
   esercizi: { id: string; titolo: string; punteggio: number; puntiMax: number }[];
 }
 
+export interface PdfEnvelope {
+  schemaEnv: 2;
+  payload: EsitoSommario;
+  signature?: string;
+  signedAt?: string;
+}
+
 const PREFIX = 'VLSM_DATA:';
 
 export function buildSommario(esito: EsitoFinale): EsitoSommario {
@@ -41,6 +48,16 @@ export function buildSommario(esito: EsitoFinale): EsitoSommario {
   };
 }
 
+// Canonical JSON con chiavi ordinate per HMAC deterministico cross-runtime.
+// Stessa implementazione lato Function: vedi functions/_lib/canonical.ts
+export function canonicalJson(value: unknown): string {
+  if (value === null || typeof value !== 'object') return JSON.stringify(value);
+  if (Array.isArray(value)) return '[' + value.map(canonicalJson).join(',') + ']';
+  const o = value as Record<string, unknown>;
+  const keys = Object.keys(o).sort();
+  return '{' + keys.map((k) => JSON.stringify(k) + ':' + canonicalJson(o[k])).join(',') + '}';
+}
+
 function utf8ToBase64(s: string): string {
   return btoa(unescape(encodeURIComponent(s)));
 }
@@ -49,18 +66,21 @@ function base64ToUtf8(s: string): string {
   return decodeURIComponent(escape(atob(s)));
 }
 
-export function encodeSommario(sommario: EsitoSommario): string {
-  return PREFIX + utf8ToBase64(JSON.stringify(sommario));
+export function encodeEnvelope(env: PdfEnvelope): string {
+  return PREFIX + utf8ToBase64(JSON.stringify(env));
 }
 
-export function decodeSommario(s: string | undefined | null): EsitoSommario | null {
+export function decodeEnvelope(s: string | undefined | null): PdfEnvelope | null {
   if (!s) return null;
   const idx = s.indexOf(PREFIX);
   if (idx === -1) return null;
   const payload = s.slice(idx + PREFIX.length).trim();
   try {
     const parsed = JSON.parse(base64ToUtf8(payload));
-    if (parsed?.schema === 1 && typeof parsed.nome === 'string') return parsed as EsitoSommario;
+    if (parsed?.schemaEnv === 2 && parsed.payload?.schema === 1) return parsed as PdfEnvelope;
+    if (parsed?.schema === 1 && typeof parsed.nome === 'string') {
+      return { schemaEnv: 2, payload: parsed as EsitoSommario };
+    }
     return null;
   } catch {
     return null;

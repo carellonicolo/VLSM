@@ -2,7 +2,7 @@ import { Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/rendere
 import type { EsitoFinale } from '../../types/domain';
 import { ETICHETTE_VLSM, ETICHETTE_PARAMETRI, ETICHETTE_RESIDUI } from '../../lib/grading';
 import { formatDuration, formatTimeOfDay } from '../../lib/format';
-import { buildSommario, encodeSommario } from '../../lib/pdfData';
+import { buildSommario, encodeEnvelope, type PdfEnvelope } from '../../lib/pdfData';
 
 Font.registerHyphenationCallback((word) => [word]);
 
@@ -162,13 +162,19 @@ interface Props {
 }
 
 export function PdfReport({ esito }: Props) {
-  const sommarioToken = encodeSommario(buildSommario(esito));
+  const envelope: PdfEnvelope = {
+    schemaEnv: 2,
+    payload: buildSommario(esito),
+    signature: esito.signature,
+    signedAt: esito.signedAt,
+  };
+  const token = encodeEnvelope(envelope);
   return (
     <Document
       title={`${esito.verificaTitolo} — ${esito.studente.nome}`}
       author="ITIS G. Marconi — Sistemi e Reti"
-      subject={sommarioToken}
-      keywords={sommarioToken}
+      subject={token}
+      keywords={token}
       creator="VLSM auto-grading app"
     >
       <Page size="A4" style={styles.page} wrap>
