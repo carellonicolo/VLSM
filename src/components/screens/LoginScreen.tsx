@@ -6,61 +6,85 @@ interface Props {
   onAdmin: () => void;
 }
 
-const PASSWORD = import.meta.env.VITE_APP_PASSWORD ?? 'vlsm2026';
+const PASSWORD_STUDENT = import.meta.env.VITE_APP_PASSWORD ?? 'vlsm2026';
+const PASSWORD_ADMIN = import.meta.env.VITE_ADMIN_PASSWORD ?? 'docente2026';
 
 export function LoginScreen({ onSuccess, onEsercitazione, onAdmin }: Props) {
-  const [pwd, setPwd] = useState('');
-  const [error, setError] = useState(false);
-  const [mode, setMode] = useState<'verifica' | 'admin'>('verifica');
+  const [pwdStudent, setPwdStudent] = useState('');
+  const [errStudent, setErrStudent] = useState(false);
+  const [pwdAdmin, setPwdAdmin] = useState('');
+  const [errAdmin, setErrAdmin] = useState(false);
 
-  const submit = (e: React.FormEvent) => {
+  const submitStudent = (e: React.FormEvent) => {
     e.preventDefault();
-    if (pwd === PASSWORD) {
-      setError(false);
-      if (mode === 'admin') onAdmin();
-      else onSuccess();
+    if (pwdStudent === PASSWORD_STUDENT) {
+      setErrStudent(false);
+      onSuccess();
     } else {
-      setError(true);
+      setErrStudent(true);
+    }
+  };
+
+  const submitAdmin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pwdAdmin === PASSWORD_ADMIN) {
+      setErrAdmin(false);
+      onAdmin();
+    } else {
+      setErrAdmin(true);
     }
   };
 
   return (
-    <div style={{ maxWidth: 420, margin: '3rem auto' }}>
-      <form className="card" onSubmit={submit}>
-        <h2 style={{ marginTop: 0 }}>Verifica VLSM</h2>
-        <p className="muted">Inserisci la password fornita dal docente.</p>
+    <div style={{ maxWidth: 460, margin: '2rem auto' }}>
+      <form className="card" onSubmit={submitStudent}>
+        <h2 style={{ marginTop: 0 }}>🎓 Svolgi la verifica</h2>
+        <p className="muted">Sezione per gli studenti. Inserisci la password fornita dal docente per iniziare.</p>
         <div className="field">
-          <label htmlFor="pwd">Password</label>
+          <label htmlFor="pwd-student">Password studente</label>
           <input
-            id="pwd"
+            id="pwd-student"
             type="password"
-            value={pwd}
-            onChange={(e) => setPwd(e.target.value)}
+            value={pwdStudent}
+            onChange={(e) => setPwdStudent(e.target.value)}
             autoFocus
             autoComplete="off"
           />
-          {error && <div className="error-msg">Password non valida.</div>}
+          {errStudent && <div className="error-msg">Password non valida.</div>}
         </div>
-        <button className="btn" type="submit" onClick={() => setMode('verifica')} style={{ width: '100%' }}>
+        <button className="btn" type="submit" style={{ width: '100%' }}>
           Entra nella verifica
         </button>
-        <button
-          className="btn btn-secondary"
-          type="submit"
-          onClick={() => setMode('admin')}
-          style={{ width: '100%', marginTop: '0.5rem' }}
-        >
-          📊 Modalità docente (correzione bulk)
+      </form>
+
+      <form className="card" onSubmit={submitAdmin} style={{ marginTop: '1rem' }}>
+        <h2 style={{ marginTop: 0 }}>📊 Correzione bulk (docente)</h2>
+        <p className="muted">
+          Sezione riservata al docente. Carica i PDF delle consegne per aggregare i voti e generare il report.
+        </p>
+        <div className="field">
+          <label htmlFor="pwd-admin">Password docente</label>
+          <input
+            id="pwd-admin"
+            type="password"
+            value={pwdAdmin}
+            onChange={(e) => setPwdAdmin(e.target.value)}
+            autoComplete="off"
+          />
+          {errAdmin && <div className="error-msg">Password non valida.</div>}
+        </div>
+        <button className="btn btn-secondary" type="submit" style={{ width: '100%' }}>
+          Entra in modalità docente
         </button>
       </form>
 
       <div className="card" style={{ marginTop: '1rem', textAlign: 'center' }}>
-        <h3 style={{ marginTop: 0, fontSize: '1rem' }}>Vuoi solo esercitarti?</h3>
+        <h3 style={{ marginTop: 0, fontSize: '1rem' }}>🎯 Vuoi solo esercitarti?</h3>
         <p className="muted" style={{ margin: '0.5rem 0 1rem' }}>
           Le simulazioni sono libere e non richiedono password. Non valgono come verifica ufficiale.
         </p>
         <button className="btn btn-secondary" type="button" onClick={onEsercitazione} style={{ width: '100%' }}>
-          🎯 Modalità esercitazione
+          Modalità esercitazione
         </button>
       </div>
     </div>
