@@ -52,7 +52,7 @@ export function AdminReportPdf({ verifiche, esercitazioni }: Props) {
         <Text style={s.subtitle}>Generato il {today} — {verifiche.length} verifiche, {esercitazioni.length} esercitazioni</Text>
 
         {verifiche.length > 0 && (
-          <>
+          <View>
             <Text style={s.cat}>Verifiche ufficiali ({verifiche.length})</Text>
             <View style={s.table}>
               <View style={s.row}>
@@ -72,11 +72,11 @@ export function AdminReportPdf({ verifiche, esercitazioni }: Props) {
                 </View>
               ))}
             </View>
-          </>
+          </View>
         )}
 
         {esercitazioni.length > 0 && (
-          <>
+          <View>
             <Text style={s.cat}>Esercitazioni libere ({esercitazioni.length})</Text>
             <View style={s.table}>
               <View style={s.row}>
@@ -96,7 +96,7 @@ export function AdminReportPdf({ verifiche, esercitazioni }: Props) {
                 </View>
               ))}
             </View>
-          </>
+          </View>
         )}
 
         <View style={s.firma} wrap={false}>
