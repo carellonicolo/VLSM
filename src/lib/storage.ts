@@ -1,4 +1,4 @@
-import type { DatiStudente, EsitoFinale, RispostaStudente, VerificaId } from '../types/domain';
+import type { Categoria, DatiStudente, EsitoFinale, RispostaStudente, VerificaId } from '../types/domain';
 
 const KEY = 'vlsm_session';
 
@@ -7,6 +7,7 @@ export type Phase = 'info' | 'test' | 'review' | 'result';
 export interface PersistedSession {
   version: 1;
   phase: Phase;
+  categoria: Categoria;
   studente?: DatiStudente;
   verificaId?: VerificaId;
   deadlineMs?: number;

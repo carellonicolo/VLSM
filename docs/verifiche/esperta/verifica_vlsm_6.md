@@ -6,16 +6,14 @@
 
 | Alunno/a | Classe | Data |
 |----------|--------|------|
-| &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |                  |                  |
+| &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |
 
 ---
 
 ## Esercizio 1 — VLSM: piano enterprise su larga scala *(10 punti — 2 pt per sottorete)*
 
-Applicare il VLSM alla rete **`172.0.0.0/13`** per soddisfare i requisiti indicati.
+Applicare il VLSM alla rete 172.0.0.0/13. I prefissi utilizzati sono nell'intervallo /15 ÷ /19.
 Ordinare le sottoreti dalla più grande alla più piccola e completare la tabella di allocazione.
-
-> ⚠️ I prefissi da utilizzare sono nell'intervallo **/15 ÷ /19**. Calcolare attentamente il numero di host disponibili per ciascun prefisso prima di procedere all'allocazione.
 
 **Requisiti:**
 
@@ -41,7 +39,7 @@ Ordinare le sottoreti dalla più grande alla più piccola e completare la tabell
 
 ## Esercizio 2 — VLSM: piano multi-segmento *(8 punti — 1 pt per sottorete)*
 
-Applicare il VLSM alla rete **`10.200.0.0/20`** per soddisfare i requisiti indicati.
+Applicare il VLSM alla rete 10.200.0.0/20 per soddisfare i requisiti indicati.
 Ordinare le sottoreti dalla più grande alla più piccola e completare la tabella di allocazione.
 
 **Requisiti:**
@@ -74,9 +72,7 @@ Ordinare le sottoreti dalla più grande alla più piccola e completare la tabell
 
 ## Esercizio 3 — Parametri di sottorete *(7 punti — 1 pt per riga)*
 
-Per ciascun indirizzo host/prefisso, determinare: indirizzo di rete, maschera decimale, primo host, ultimo host e broadcast.
-
-> ⚠️ Tutti i prefissi coinvolgono il **secondo ottetto** (o superiore): l'AND va applicato sull'ottetto corretto in funzione del prefisso. Verificare con attenzione la maschera prima di procedere.
+Per ciascun indirizzo host/prefisso, determinare i parametri richiesti. Tutti i prefissi coinvolgono il secondo ottetto o superiore.
 
 | Ind. host / prefisso | Ind. di rete | Maschera decimale | Primo host | Ultimo host | Broadcast |
 |----------------------|-------------|-------------------|------------|-------------|-----------|
@@ -92,9 +88,9 @@ Per ciascun indirizzo host/prefisso, determinare: indirizzo di rete, maschera de
 
 ## Esercizio 4 — Analisi piano VLSM di un'infrastruttura enterprise *(5 punti)*
 
-Un'organizzazione ha suddiviso il blocco **`10.0.0.0/12`** tra sette reparti come indicato di seguito.
+Un'organizzazione ha suddiviso il blocco 10.0.0.0/12 tra sette reparti.
 
-### a) *(3 pt)* — Completare la tabella con maschera, primo host, ultimo host e broadcast per ciascuna sottorete.
+### a) *(3 pt)* — Completare la tabella con maschera, primo host, ultimo host e broadcast.
 
 | ID | Ind. di rete | Prefisso | Maschera | Primo host | Ultimo host | Broadcast |
 |----|-------------|----------|----------|------------|-------------|-----------|
@@ -108,19 +104,19 @@ Un'organizzazione ha suddiviso il blocco **`10.0.0.0/12`** tra sette reparti com
 
 ### b) *(1 pt)* — Identificare i blocchi non allocati nel blocco `10.0.0.0/12` ed esprimerli in notazione CIDR.
 
-> 💡 I blocchi residui possono avere prefissi grandi (es. **/13**, **/19**, **/21**): aggregare correttamente gli spazi contigui.
-
 | Ind. di rete (CIDR) | Prefisso | Primo host | Ultimo host | Broadcast |
 |---------------------|----------|------------|-------------|-----------|
 | | | | | |
 | | | | | |
 | | | | | |
 
-### c) *(1 pt)* — Deve essere aggiunto un nuovo reparto che richiede **500.000 host**. Indicare il blocco residuo più adatto, il prefisso CIDR minimo necessario e compilare la riga seguente.
+### c) *(1 pt)* — È richiesta una nuova sottorete per **500.000 host**. Scegliere il blocco residuo più adatto e compilare la riga seguente.
 
 | Ind. di rete | Prefisso | Maschera | Primo host | Ultimo host | Broadcast |
 |-------------|----------|----------|------------|-------------|-----------|
 | | | | | | |
+
+---
 
 ---
 *Nicolò Carello — info@nicolocarello.it*

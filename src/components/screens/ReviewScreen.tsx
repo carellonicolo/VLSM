@@ -5,6 +5,7 @@ interface Props {
   answers: RispostaStudente;
   onConferma: () => void;
   onIndietro: () => void;
+  signing?: boolean;
 }
 
 function countEmpty(values: string[]): number {
@@ -42,7 +43,7 @@ function summarize(verifica: Verifica, answers: RispostaStudente) {
   });
 }
 
-export function ReviewScreen({ verifica, answers, onConferma, onIndietro }: Props) {
+export function ReviewScreen({ verifica, answers, onConferma, onIndietro, signing = false }: Props) {
   const sum = summarize(verifica, answers);
   const hasVuoti = sum.some((s) => s.vuoti > 0);
 
@@ -65,11 +66,11 @@ export function ReviewScreen({ verifica, answers, onConferma, onIndietro }: Prop
         ))}
       </ul>
       <div className="actions">
-        <button className="btn-secondary btn" type="button" onClick={onIndietro}>
+        <button className="btn-secondary btn" type="button" onClick={onIndietro} disabled={signing}>
           Torna alla verifica
         </button>
-        <button className="btn" type="button" onClick={onConferma}>
-          {hasVuoti ? 'Consegna comunque' : 'Conferma consegna'}
+        <button className="btn" type="button" onClick={onConferma} disabled={signing}>
+          {signing ? 'Firma in corso…' : hasVuoti ? 'Consegna comunque' : 'Conferma consegna'}
         </button>
       </div>
     </div>

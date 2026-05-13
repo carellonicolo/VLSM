@@ -476,6 +476,7 @@ export function gradeVerifica(
   return {
     verificaId: v.id,
     verificaTitolo: v.titolo,
+    categoria: v.categoria,
     studente,
     data: dataConsegna.toLocaleDateString('it-IT'),
     esercizi,

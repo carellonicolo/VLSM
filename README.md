@@ -75,7 +75,44 @@ Per le env var aggiungile dal dashboard o con `wrangler pages secret put`.
 
 - `public/_redirects` (`/* /index.html 200`) gestisce il routing client-side.
 - `public/_headers` imposta header di sicurezza base (no CSP rigida, perché `@react-pdf/renderer` ne richiede flessibilità).
-- Il PDF è lazy-loaded (`React.lazy`): il bundle iniziale è ~184 KB gzip (56 KB main + ~493 KB il chunk PDF caricato solo nella schermata risultato).
+- Il PDF è lazy-loaded (`React.lazy`): il bundle iniziale è ~62 KB gzip; il chunk PDF (`react-pdf`) viene scaricato solo a fine verifica.
+
+### Firma digitale HMAC (Pages Functions)
+
+L'app firma ogni PDF con `HMAC-SHA256` server-side per garantirne l'integrità:
+
+- Quando lo studente conferma la consegna, il frontend chiama `POST /api/sign` con il riassunto dell'esito; la Function calcola la firma usando un **secret server-side** (`VLSM_HMAC_SECRET`) e la restituisce
+- La firma + il payload vengono incorporati nei metadati PDF (`Subject`/`Keywords`)
+- Quando il docente carica i PDF in modalità admin, il frontend chiama `POST /api/verify` per ogni file e mostra un badge "✅ Firma valida", "❌ Manomesso" o "⚠️ Non firmato"
+
+**Configurazione Cloudflare (obbligatoria per usare la firma):**
+
+1. Genera un secret random lungo almeno 32 caratteri:
+   ```bash
+   openssl rand -base64 48
+   ```
+2. Cloudflare Dashboard → progetto `vlsm` → **Settings** → **Environment variables** → aggiungi (sia Production che Preview):
+   - **Variable name**: `VLSM_HMAC_SECRET`
+   - **Value**: il secret generato
+   - **Type**: **Secret** (cliccando "Encrypt" non viene esposta nei deploy log)
+3. Redeploy. Le Functions sono in `functions/api/` e vengono compilate automaticamente da Pages.
+
+**Senza il secret**, le API rispondono 500 e il flusso degrada: i PDF vengono comunque generati ma senza firma (badge "⚠️ Non firmato" in admin).
+
+**Costo**: ben sotto il free tier di Cloudflare (100k req/giorno + 10ms CPU). Per dettagli: vedi README sezione sviluppo.
+
+### Sviluppo locale con Pages Functions
+
+Per testare le API in locale serve `wrangler`:
+
+```bash
+npm install -g wrangler   # una sola volta
+wrangler pages dev dist --port 8788 --binding VLSM_HMAC_SECRET=dev-secret-only-for-local
+# in un altro terminale:
+npm run dev               # Vite proxierà /api → :8788
+```
+
+In dev senza wrangler le API sono offline → i PDF vengono generati senza firma (badge "⚠️ Non firmato").
 
 ## Struttura
 
@@ -109,17 +146,38 @@ Le **soluzioni attese** non sono memorizzate: vengono calcolate al volo dalla li
 
 ## Sorgenti didattici
 
-I file in `docs/` (`verifica_vlsm_1..16.md`, `verifica_vlsm.docx`, `soluzioni_vlsm.docx`, `soluzioni_vlsm_completo.md`) restano nel repo come riferimento del rubric originale. Non vengono usati a runtime.
+```
+docs/
+├── verifiche/           # verifiche ufficiali, accesso con password
+│   ├── base/            # v1, v2, v7, v8
+│   ├── media/           # v3, v5, v10, v11
+│   ├── alta/            # v4, v9, v12, v13
+│   └── esperta/         # v6, v14, v15, v16
+├── esercitazioni/       # simulazioni libere senza password
+│   ├── base/            # s1, s2
+│   ├── media/           # s3, s4
+│   ├── alta/            # s5, s6
+│   └── esperta/         # s7, s8
+└── soluzioni/           # uso esclusivo docente
+```
 
-I file `verifica_vlsm_7.md` ... `verifica_vlsm_16.md` sono generati automaticamente da `scripts/generate-md.ts` (`npx tsx scripts/generate-md.ts`) a partire dal dataset in `src/data/verifiche.ts`.
+Tutti i `.md` sono generati automaticamente da `scripts/generate-md.ts` (`npx tsx scripts/generate-md.ts`) a partire dal dataset in `src/data/verifiche.ts`. Le verifiche `.docx` di esempio e la griglia di correzione completa sono in `docs/soluzioni/`.
 
-## Livelli di difficoltà
+## Modalità d'uso
 
-Le 16 verifiche sono distribuite su 4 livelli (4 verifiche ciascuno). Lo studente seleziona il livello da un menù a tendina prima di iniziare; il sorteggio avviene **all'interno del livello scelto**.
+L'app ha due modalità separate, accessibili dalla schermata iniziale.
 
-| Livello | Verifiche | Caratteristiche |
-|---------|-----------|------------------|
-| Base | v1, v2, v7, v8 | Reti /22–/24, host < 200 |
-| Media | v3, v5, v10, v11 | Reti /20–/22, host < 1000 |
-| Alta | v4, v9, v12, v13 | Reti /16–/19, host fino a 10.000, AND su 3° ottetto |
-| Esperta | v6, v14, v15, v16 | Reti /11–/14, host fino a 250.000, AND su 2° ottetto |
+### Verifica ufficiale (con password)
+Lo studente inserisce la `VITE_APP_PASSWORD`, sceglie il livello dal menù a tendina e il sistema sorteggia una delle 4 verifiche di quel livello. Il PDF finale ha gli spazi per la firma studente/docente.
+
+### Esercitazione libera (senza password)
+Pulsante "🎯 Modalità esercitazione" sulla schermata di login: nessuna password richiesta. Lo studente sceglie il livello e il sistema sorteggia una delle 2 simulazioni del livello. Il PDF mostra un banner "ESERCITAZIONE LIBERA — non vale come verifica ufficiale" e non ha gli spazi firma.
+
+### Livelli di difficoltà
+
+| Livello | Verifiche (4) | Simulazioni (2) | Caratteristiche |
+|---------|---------------|-----------------|------------------|
+| Base | v1, v2, v7, v8 | s1, s2 | Reti /22–/24, host < 200 |
+| Media | v3, v5, v10, v11 | s3, s4 | Reti /20–/22, host < 1000 |
+| Alta | v4, v9, v12, v13 | s5, s6 | Reti /16–/19, host fino a 10.000 |
+| Esperta | v6, v14, v15, v16 | s7, s8 | Reti /11–/14, host fino a 250.000 |

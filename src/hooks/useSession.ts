@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type {
+  Categoria,
   DatiStudente,
   EsitoFinale,
   RispostaEsercizio,
@@ -21,6 +22,7 @@ const INITIAL: PersistedSession = {
   version: 1,
   phase: 'info',
   durataMin: DURATA_DEFAULT_MIN,
+  categoria: 'verifica',
 };
 
 export function useSession() {
@@ -38,16 +40,21 @@ export function useSession() {
 
   const startTest = useCallback((studente: DatiStudente, verificaId: VerificaId, durataMin?: number) => {
     const minuti = durataMin ?? DURATA_DEFAULT_MIN;
-    setSession({
+    setSession((s) => ({
       version: 1,
       phase: 'test',
       studente,
       verificaId,
       durataMin: minuti,
+      categoria: s.categoria ?? 'verifica',
       deadlineMs: Date.now() + minuti * 60_000,
       answers: { verificaId, esercizi: {} },
       startedAt: new Date().toISOString(),
-    });
+    }));
+  }, []);
+
+  const setCategoria = useCallback((categoria: Categoria) => {
+    setSession((s) => ({ ...s, categoria, phase: 'info' }));
   }, []);
 
   const updateRiga = useCallback(
@@ -107,5 +114,6 @@ export function useSession() {
     goPhase,
     setEsito,
     reset,
+    setCategoria,
   };
 }

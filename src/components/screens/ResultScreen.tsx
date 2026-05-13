@@ -25,7 +25,13 @@ export function ResultScreen({ esito, onNuovaSessione }: Props) {
 
   return (
     <>
-      <div className="voto-box">
+      {esito.categoria === 'esercitazione' && (
+        <div className="card" style={{ background: '#fff3c4', borderColor: '#d4a017', color: '#7c5d00', textAlign: 'center', padding: '0.75rem' }}>
+          <strong>🎯 Esercitazione libera</strong> — Questo risultato è solo di pratica, non viene registrato come verifica ufficiale.
+        </div>
+      )}
+
+      <div className="voto-box" style={esito.categoria === 'esercitazione' ? { background: '#7c5d00' } : undefined}>
         <p className="voto30">{esito.voto30}/30</p>
         <div className="voto10">Equivalente in decimi: {esito.voto10}/10</div>
         {esito.motivoConsegna === 'timeout' && (
