@@ -2,11 +2,17 @@ name = "vlsm"
 compatibility_date = "2024-11-01"
 pages_build_output_dir = "dist"
 
-# D1 binding per local dev (`wrangler pages dev dist`)
-# In produzione il binding si configura dal pannello Cloudflare Pages:
-# Settings → Functions → D1 database bindings → Add binding (Variable name: DB)
-[[d1_databases]]
-binding = "DB"
-database_name = "vlsm-sessions"
-database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
-migrations_dir = "migrations"
+# Il binding D1 in produzione è configurato dal pannello Cloudflare Pages:
+# Settings → Functions → D1 database bindings → Add binding (Variable name: DB).
+#
+# Per sviluppo locale con `wrangler pages dev` aggiungi qui sotto un blocco
+# `[[d1_databases]]` con il TUO database_id (UUID), esempio:
+#
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "vlsm-sessions"
+# database_id = "il-tuo-uuid-qui"
+# migrations_dir = "migrations"
+#
+# Non lo committiamo per evitare che blocchi i deploy con un UUID
+# di un altro account.
