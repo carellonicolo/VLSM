@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { EventoFocus, RispostaEsercizio, RispostaRiga, RispostaStudente, Verifica } from '../../types/domain';
 import { EsercizioVlsmAllocView } from '../exercises/EsercizioVlsmAlloc';
 import { EsercizioParametriView } from '../exercises/EsercizioParametri';
 import { EsercizioAnalisiPianoView } from '../exercises/EsercizioAnalisiPiano';
 import { TimerBadge } from '../ui/TimerBadge';
 import { formatDuration } from '../../lib/format';
+import { useTimerWarnings } from '../../hooks/useTimerWarnings';
 
 interface Props {
   verifica: Verifica;
@@ -35,6 +36,10 @@ export function TestScreen({
 }: Props) {
   const [alertEvent, setAlertEvent] = useState<EventoFocus | null>(null);
   const [acknowledgedCount, setAcknowledgedCount] = useState(eventiFocus.length);
+  const [timerWarning, setTimerWarning] = useState<number | null>(null);
+
+  const TIMER_THRESHOLDS = useMemo(() => [5, 2, 1], []);
+  useTimerWarnings(true, deadlineMs, TIMER_THRESHOLDS, (m) => setTimerWarning(m));
 
   useEffect(() => {
     if (eventiFocus.length > acknowledgedCount) {
@@ -47,6 +52,7 @@ export function TestScreen({
     setAcknowledgedCount(eventiFocus.length);
     setAlertEvent(null);
   };
+  const closeTimerWarning = () => setTimerWarning(null);
 
   const totaleMs = eventiFocus.reduce((s, e) => s + e.durataMs, 0);
   const numeroAbbandoni = eventiFocus.length;
@@ -131,6 +137,34 @@ export function TestScreen({
             </p>
             <button className="btn" type="button" onClick={closeAlert}>
               Ho capito, riprendo la verifica
+            </button>
+          </div>
+        </div>
+      )}
+
+      {timerWarning !== null && (
+        <div className="alert-overlay" role="alertdialog" aria-modal="true">
+          <div className={`timer-modal level-${timerWarning}`}>
+            <div className="timer-icon" aria-hidden>
+              {timerWarning === 5 ? '⏰' : timerWarning === 2 ? '⏳' : '🔥'}
+            </div>
+            <h2>
+              {timerWarning === 1 ? 'ULTIMO MINUTO!' : timerWarning === 2 ? 'Ancora 2 minuti' : 'Mancano 5 minuti'}
+            </h2>
+            <div className="timer-counter">
+              {timerWarning === 1
+                ? '⚠ La verifica si chiuderà a brevissimo'
+                : `Tempo residuo: ~${timerWarning} ${timerWarning === 1 ? 'minuto' : 'minuti'}`}
+            </div>
+            <p style={{ fontSize: '0.9rem' }}>
+              {timerWarning === 1
+                ? 'Al termine del tempo la verifica verrà consegnata automaticamente con le risposte attuali.'
+                : timerWarning === 2
+                  ? 'Controlla le risposte ancora vuote: alla scadenza la verifica viene consegnata automaticamente.'
+                  : 'Hai ancora tempo. Continua con calma, ma tieni d\'occhio il timer.'}
+            </p>
+            <button className="btn" type="button" onClick={closeTimerWarning}>
+              Ho capito
             </button>
           </div>
         </div>
