@@ -41,6 +41,14 @@ export function TestScreen({
   const TIMER_THRESHOLDS = useMemo(() => [5, 2, 1], []);
   useTimerWarnings(true, deadlineMs, TIMER_THRESHOLDS, (m) => setTimerWarning(m));
 
+  // Preload del chunk PDF in background: quando lo studente arriverà alla
+  // schermata risultato il chunk è già scaricato, evitando crash da fetch
+  // di chunk non più disponibili (es. nuovo deploy con hash diversi).
+  useEffect(() => {
+    import('@react-pdf/renderer').catch(() => {});
+    import('../pdf/PdfReport').catch(() => {});
+  }, []);
+
   useEffect(() => {
     if (eventiFocus.length > acknowledgedCount) {
       const newest = eventiFocus[eventiFocus.length - 1];

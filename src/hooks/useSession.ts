@@ -107,7 +107,13 @@ export function useSession() {
   }, []);
 
   const setEsito = useCallback((esito: EsitoFinale) => {
-    setSession((s) => ({ ...s, phase: 'result', esito }));
+    setSession((s) => {
+      const next: PersistedSession = { ...s, phase: 'result', esito };
+      // Scriviamo SUBITO in localStorage (non aspettare il debounce 300ms):
+      // se ResultScreen o il PDF crashano, l'esito resta recuperabile.
+      writeSession(next);
+      return next;
+    });
   }, []);
 
   const reset = useCallback(() => {
