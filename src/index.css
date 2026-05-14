@@ -489,6 +489,82 @@ label {
   background: #a02214;
 }
 
+.timer-modal {
+  background: var(--card);
+  border-width: 4px;
+  border-style: solid;
+  border-radius: 12px;
+  max-width: 480px;
+  width: 100%;
+  padding: 1.75rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.timer-modal h2 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.4rem;
+  text-align: center;
+}
+
+.timer-modal .timer-icon {
+  font-size: 3.5rem;
+  text-align: center;
+  margin-bottom: 0.25rem;
+  line-height: 1;
+}
+
+.timer-modal p {
+  margin: 0.5rem 0;
+  text-align: center;
+}
+
+.timer-modal .timer-counter {
+  padding: 0.7rem 1rem;
+  border-radius: 6px;
+  margin: 1rem 0;
+  text-align: center;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.timer-modal .btn {
+  width: 100%;
+  margin-top: 0.5rem;
+  font-size: 0.95rem;
+  padding: 0.65rem;
+}
+
+.timer-modal.level-5 {
+  border-color: #0b7285;
+}
+.timer-modal.level-5 h2 { color: #0b7285; }
+.timer-modal.level-5 .timer-counter {
+  background: #d2f4f8;
+  color: #0b7285;
+}
+.timer-modal.level-5 .btn { background: #0b7285; }
+
+.timer-modal.level-2 {
+  border-color: #d97706;
+}
+.timer-modal.level-2 h2 { color: #d97706; }
+.timer-modal.level-2 .timer-counter {
+  background: #fff3c4;
+  color: #7c5d00;
+}
+.timer-modal.level-2 .btn { background: #d97706; }
+
+.timer-modal.level-1 {
+  border-color: var(--error);
+  animation: shake 0.4s ease-out;
+}
+.timer-modal.level-1 h2 { color: var(--error); }
+.timer-modal.level-1 .timer-counter {
+  background: var(--error-bg);
+  color: var(--error-text);
+}
+.timer-modal.level-1 .btn { background: var(--error); }
+
 .muted {
   color: var(--muted);
   font-size: 0.85rem;

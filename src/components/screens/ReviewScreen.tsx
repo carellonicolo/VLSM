@@ -6,6 +6,7 @@ interface Props {
   onConferma: () => void;
   onIndietro: () => void;
   signing?: boolean;
+  errore?: string | null;
 }
 
 function countEmpty(values: string[]): number {
@@ -43,7 +44,7 @@ function summarize(verifica: Verifica, answers: RispostaStudente) {
   });
 }
 
-export function ReviewScreen({ verifica, answers, onConferma, onIndietro, signing = false }: Props) {
+export function ReviewScreen({ verifica, answers, onConferma, onIndietro, signing = false, errore = null }: Props) {
   const sum = summarize(verifica, answers);
   const hasVuoti = sum.some((s) => s.vuoti > 0);
 
@@ -65,6 +66,21 @@ export function ReviewScreen({ verifica, answers, onConferma, onIndietro, signin
           </li>
         ))}
       </ul>
+      {errore && (
+        <div
+          className="error-msg"
+          style={{
+            background: 'var(--error-bg)',
+            padding: '0.75rem 1rem',
+            borderRadius: 6,
+            border: '1px solid var(--error)',
+            margin: '0.75rem 0',
+            fontSize: '0.9rem',
+          }}
+        >
+          <strong>⚠ {errore}</strong>
+        </div>
+      )}
       <div className="actions">
         <button className="btn-secondary btn" type="button" onClick={onIndietro} disabled={signing}>
           Torna alla verifica

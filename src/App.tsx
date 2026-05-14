@@ -35,19 +35,50 @@ export default function App() {
   const categoria = session.categoria ?? 'verifica';
 
   const [signing, setSigning] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
   const submit = useCallback(
     async (motivo: MotivoConsegna) => {
       if (!verifica || !session.answers || !session.studente) return;
-      const startedAt = session.startedAt ? new Date(session.startedAt) : undefined;
-      const eventiFocus = session.eventiFocus ?? [];
-      const esito = gradeVerifica(verifica, session.answers, session.studente, motivo, new Date(), startedAt, eventiFocus);
+      setSubmitError(null);
+      // Calcolo del voto: avvolto in try/catch per non lasciare mai lo studente
+      // in una schermata bloccata. Se anche il grading fallisse, gli mostriamo
+      // un errore visibile e i suoi dati restano in localStorage.
+      let esito;
+      try {
+        const startedAt = session.startedAt ? new Date(session.startedAt) : undefined;
+        const eventiFocus = session.eventiFocus ?? [];
+        esito = gradeVerifica(verifica, session.answers, session.studente, motivo, new Date(), startedAt, eventiFocus);
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.error('gradeVerifica failed', e);
+        const msg = e instanceof Error ? e.message : String(e);
+        setSubmitError(`Errore nel calcolo del voto: ${msg}. Le tue risposte sono salvate. Riprova o avvisa il docente.`);
+        return;
+      }
+
+      // Firma HMAC: tutto opzionale, errori vengono ignorati lasciando esito
+      // non firmato (l'admin lo vedrà come "non firmato" ma resta valido).
       setSigning(true);
-      const sig = await signSommario(buildSommario(esito));
+      let sig = null;
+      try {
+        sig = await signSommario(buildSommario(esito));
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.error('signSommario failed', e);
+      }
       setSigning(false);
+
       const finalEsito = sig
         ? { ...esito, signature: sig.signature, signedAt: sig.signedAt }
         : esito;
-      setEsito(finalEsito);
+      try {
+        setEsito(finalEsito);
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.error('setEsito failed', e);
+        setSubmitError('Errore nel salvataggio della consegna. Riprova oppure ricarica la pagina (i dati restano salvati).');
+      }
     },
     [verifica, session.answers, session.studente, session.startedAt, session.eventiFocus, setEsito]
   );
@@ -141,6 +172,7 @@ export default function App() {
           onConferma={() => { void submit('volontaria'); }}
           onIndietro={() => goPhase('test')}
           signing={signing}
+          errore={submitError}
         />
         <Footer />
       </div>
