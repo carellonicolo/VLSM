@@ -2,6 +2,10 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react
 import { useSession } from './hooks/useSession';
 import { useTheme } from './hooks/useTheme';
 import { useFocusMonitor } from './hooks/useFocusMonitor';
+import { useCloudSync } from './hooks/useCloudSync';
+import { SyncIndicator } from './components/ui/SyncIndicator';
+import type { RecoverableSession } from './lib/cloudSync';
+import type { VerificaId } from './types/domain';
 import { LoginScreen } from './components/screens/LoginScreen';
 import { StudentInfoScreen } from './components/screens/StudentInfoScreen';
 import { TestScreen } from './components/screens/TestScreen';
@@ -21,7 +25,7 @@ const AdminScreen = lazy(() => import('./components/admin/AdminScreen').then((m)
 type AppMode = 'login' | 'student' | 'admin';
 
 export default function App() {
-  const { session, startTest, updateRiga, updateParteC, goPhase, setEsito, reset, setCategoria, addEventoFocus } = useSession();
+  const { session, startTest, resumeFromCloud, updateRiga, updateParteC, goPhase, setEsito, reset, setCategoria, addEventoFocus } = useSession();
   const { theme, toggle: toggleTheme } = useTheme();
   const [mode, setMode] = useState<AppMode>('login');
 
@@ -30,6 +34,39 @@ export default function App() {
   // Monitora i cambi di focus solo durante la verifica vera e propria.
   const monitorActive = mode === 'student' && session.phase === 'test' && session.categoria === 'verifica';
   useFocusMonitor(monitorActive, addEventoFocus);
+
+  // Cloud sync attivo per le verifiche ufficiali (in_progress, consegnata).
+  // Le esercitazioni libere NON vengono sincronizzate sul cloud.
+  const cloudEnabled = mode === 'student' && session.categoria === 'verifica' && session.phase !== 'info' && !!session.studente && !!session.verificaId;
+  const cloudState = session.phase === 'result' ? 'consegnata' : 'in_progress';
+  const cloud = useCloudSync({
+    enabled: cloudEnabled,
+    studente: session.studente,
+    categoria: session.categoria ?? 'verifica',
+    verificaId: session.verificaId,
+    verificaTitolo: (session.verificaId ? getVerifica(session.verificaId)?.titolo : undefined),
+    difficolta: session.verificaId ? getVerifica(session.verificaId)?.difficolta : undefined,
+    startedAt: session.startedAt,
+    deadlineAt: session.deadlineMs ? new Date(session.deadlineMs).toISOString() : undefined,
+    durationMin: session.durataMin,
+    answers: session.answers,
+    eventiFocus: session.eventiFocus ?? [],
+    state: cloudState,
+    esito: session.esito,
+  });
+
+  const handleResume = (s: RecoverableSession) => {
+    resumeFromCloud({
+      studente: s.studente,
+      verificaId: s.verificaId as VerificaId,
+      categoria: s.categoria,
+      startedAt: s.startedAt,
+      deadlineAt: s.deadlineAt,
+      durationMin: s.durationMin,
+      answers: s.answers,
+      eventiFocus: s.eventiFocus,
+    });
+  };
 
   const verifica = useMemo(() => (session.verificaId ? getVerifica(session.verificaId) : undefined), [session.verificaId]);
   const categoria = session.categoria ?? 'verifica';
@@ -74,6 +111,10 @@ export default function App() {
         : esito;
       try {
         setEsito(finalEsito);
+        // Flush immediato del cloud sync con stato 'consegnata' (best-effort).
+        // Non blocchiamo la UI: se fallisce non importa, localStorage e PDF
+        // restano la fonte primaria di verità.
+        void cloud.flush();
       } catch (e) {
         // eslint-disable-next-line no-console
         console.error('setEsito failed', e);
@@ -132,6 +173,7 @@ export default function App() {
           durataMin={session.durataMin}
           categoria={categoria}
           onStart={(s, v, d) => startTest(s, v, d)}
+          onResume={handleResume}
         />
         <Footer />
       </div>
@@ -143,6 +185,11 @@ export default function App() {
       <div className="shell">
         {themeToggle}
         <Header />
+        {categoria === 'verifica' && (
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem' }}>
+            <SyncIndicator status={cloud.status} lastSyncAt={cloud.lastSyncAt} />
+          </div>
+        )}
         <TestScreen
           verifica={verifica}
           answers={session.answers}

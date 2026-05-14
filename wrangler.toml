@@ -1,0 +1,12 @@
+name = "vlsm"
+compatibility_date = "2024-11-01"
+pages_build_output_dir = "dist"
+
+# D1 binding per local dev (`wrangler pages dev dist`)
+# In produzione il binding si configura dal pannello Cloudflare Pages:
+# Settings → Functions → D1 database bindings → Add binding (Variable name: DB)
+[[d1_databases]]
+binding = "DB"
+database_name = "vlsm-sessions"
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+migrations_dir = "migrations"

@@ -115,7 +115,47 @@ wrangler pages dev dist --port 8788 --binding VLSM_HMAC_SECRET=dev-secret-only-f
 npm run dev               # Vite proxierà /api → :8788
 ```
 
-In dev senza wrangler le API sono offline → i PDF vengono generati senza firma (badge "⚠️ Non firmato").
+In dev senza wrangler le API sono offline → i PDF vengono generati senza firma (badge "⚠️ Non firmato") e il cloud sync è disabilitato (l'app funziona solo su localStorage).
+
+### Cloud sync delle sessioni (Cloudflare D1)
+
+L'app sincronizza automaticamente le verifiche degli studenti su un database SQLite serverless (Cloudflare D1) per:
+- **Recupero in caso di crash**: lo studente può riprendere da un altro PC se nome+classe corrispondono.
+- **Vista live docente**: nella modalità docente la tab "🟢 Sessioni live" mostra in tempo reale tutti gli studenti che stanno svolgendo o hanno consegnato la verifica, con possibilità di "riaprire" o eliminare una sessione.
+
+**Setup (una sola volta, dalla dashboard Cloudflare):**
+
+1. **Crea il database D1**
+   - Dashboard Cloudflare → **Workers & Pages** → **D1 SQL Database** → **Create database**
+   - Nome: `vlsm-sessions` (o quello che preferisci)
+   - Annota il `database_id` (UUID)
+
+2. **Applica lo schema**
+   - Apri il database appena creato → tab **Console**
+   - Copia il contenuto di `migrations/0001_init.sql` e clicca **Execute**
+
+3. **Collega il DB al progetto Pages**
+   - Pages → progetto `vlsm` → **Settings** → **Functions** → sezione **D1 database bindings** → **Add binding**
+   - Variable name: `DB` (esatto, case-sensitive)
+   - D1 database: seleziona `vlsm-sessions`
+   - Salva
+
+4. **Aggiungi le password server-side (Environment variables)**
+   - Le funzioni server (`/api/session/*`, `/api/sessions/*`) richiedono le stesse password che usi sul client, ma con nomi senza prefisso `VITE_`:
+     - `APP_PASSWORD` (=valore di `VITE_APP_PASSWORD`)
+     - `ADMIN_PASSWORD` (=valore di `VITE_ADMIN_PASSWORD`)
+   - Tipo: **Secret** (criptate at rest)
+
+5. **Forza un nuovo deploy**
+   - Pages → Deployments → **Create deployment** (oppure pusha un commit)
+
+**Cosa succede senza setup:**
+- L'app continua a funzionare su localStorage
+- L'indicatore di sync mostra "📵 Backup cloud non disponibile"
+- La tab "Sessioni live" in modalità docente mostra un messaggio di errore con istruzioni
+- Nessuna interruzione del flusso normale
+
+**Privacy:** ai sensi del Regolamento UE 2016/679 (GDPR), il titolare del trattamento è la scuola. I dati raccolti (nome, classe, risposte, eventi distrazione) sono conservati a tempo indeterminato a meno che non li cancelli manualmente da Cloudflare D1 (Console → query `DELETE FROM sessions WHERE ...`) o dalla tab admin "Sessioni live" tramite il bottone 🗑 Elimina.
 
 ## Struttura
 
