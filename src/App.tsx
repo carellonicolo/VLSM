@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useSession } from './hooks/useSession';
 import { useTheme } from './hooks/useTheme';
+import { useFocusMonitor } from './hooks/useFocusMonitor';
 import { LoginScreen } from './components/screens/LoginScreen';
 import { StudentInfoScreen } from './components/screens/StudentInfoScreen';
 import { TestScreen } from './components/screens/TestScreen';
@@ -20,11 +21,15 @@ const AdminScreen = lazy(() => import('./components/admin/AdminScreen').then((m)
 type AppMode = 'login' | 'student' | 'admin';
 
 export default function App() {
-  const { session, startTest, updateRiga, updateParteC, goPhase, setEsito, reset, setCategoria } = useSession();
+  const { session, startTest, updateRiga, updateParteC, goPhase, setEsito, reset, setCategoria, addEventoFocus } = useSession();
   const { theme, toggle: toggleTheme } = useTheme();
   const [mode, setMode] = useState<AppMode>('login');
 
   const themeToggle = <ThemeToggle theme={theme} onToggle={toggleTheme} />;
+
+  // Monitora i cambi di focus solo durante la verifica vera e propria.
+  const monitorActive = mode === 'student' && session.phase === 'test' && session.categoria === 'verifica';
+  useFocusMonitor(monitorActive, addEventoFocus);
 
   const verifica = useMemo(() => (session.verificaId ? getVerifica(session.verificaId) : undefined), [session.verificaId]);
   const categoria = session.categoria ?? 'verifica';
@@ -34,7 +39,8 @@ export default function App() {
     async (motivo: MotivoConsegna) => {
       if (!verifica || !session.answers || !session.studente) return;
       const startedAt = session.startedAt ? new Date(session.startedAt) : undefined;
-      const esito = gradeVerifica(verifica, session.answers, session.studente, motivo, new Date(), startedAt);
+      const eventiFocus = session.eventiFocus ?? [];
+      const esito = gradeVerifica(verifica, session.answers, session.studente, motivo, new Date(), startedAt, eventiFocus);
       setSigning(true);
       const sig = await signSommario(buildSommario(esito));
       setSigning(false);
@@ -43,7 +49,7 @@ export default function App() {
         : esito;
       setEsito(finalEsito);
     },
-    [verifica, session.answers, session.studente, session.startedAt, setEsito]
+    [verifica, session.answers, session.studente, session.startedAt, session.eventiFocus, setEsito]
   );
 
   useEffect(() => {
@@ -112,6 +118,8 @@ export default function App() {
           deadlineMs={session.deadlineMs}
           nome={session.studente.nome}
           classe={session.studente.classe}
+          eventiFocus={session.eventiFocus ?? []}
+          isEsercitazione={categoria === 'esercitazione'}
           onUpdateRiga={updateRiga}
           onUpdateParteC={updateParteC}
           onTermina={() => goPhase('review')}

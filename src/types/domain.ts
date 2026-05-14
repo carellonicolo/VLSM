@@ -109,6 +109,11 @@ export interface EsitoEsercizio {
 
 export type MotivoConsegna = 'volontaria' | 'timeout';
 
+export interface EventoFocus {
+  startedAt: string;
+  durataMs: number;
+}
+
 export interface DatiStudente {
   nome: string;
   classe: string;
@@ -129,4 +134,5 @@ export interface EsitoFinale {
   motivoConsegna: MotivoConsegna;
   signature?: string;
   signedAt?: string;
+  eventiFocus: EventoFocus[];
 }

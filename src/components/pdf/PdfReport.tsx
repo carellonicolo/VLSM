@@ -149,6 +149,31 @@ const styles = StyleSheet.create({
     color: '#1f7a3c',
     fontWeight: 'bold',
   },
+  monitorBox: {
+    marginTop: 14,
+    padding: 8,
+    borderWidth: 0.7,
+    borderStyle: 'solid',
+    borderRadius: 4,
+  },
+  monitorOk: {
+    borderColor: '#1f7a3c',
+    backgroundColor: '#e6f5ec',
+  },
+  monitorWarn: {
+    borderColor: '#c0392b',
+    backgroundColor: '#ffe6e1',
+  },
+  monitorTitle: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    marginBottom: 4,
+    color: '#1a2233',
+  },
+  monitorEventoTr: {
+    fontSize: 8,
+    paddingVertical: 1,
+  },
   firmaBox: {
     width: '45%',
   },
@@ -295,6 +320,26 @@ export function PdfReport({ esito }: Props) {
             )}
           </View>
         ))}
+
+        {esito.categoria !== 'esercitazione' && (
+          <View
+            style={[styles.monitorBox, esito.eventiFocus.length === 0 ? styles.monitorOk : styles.monitorWarn]}
+            wrap={false}
+          >
+            <Text style={styles.monitorTitle}>
+              {esito.eventiFocus.length === 0
+                ? '✓ Note di sessione — Nessuna distrazione rilevata durante la verifica'
+                : `⚠ Note di sessione — ${esito.eventiFocus.length} abbandono${esito.eventiFocus.length === 1 ? '' : 'i'} della pagina (totale ${formatDuration(esito.eventiFocus.reduce((a, e) => a + e.durataMs, 0))} fuori focus)`}
+            </Text>
+            {esito.eventiFocus.length > 0 && esito.eventiFocus.map((e, i) => (
+              <View key={i} style={styles.monitorEventoTr}>
+                <Text>
+                  #{i + 1} — {formatTimeOfDay(e.startedAt)} → durata {formatDuration(e.durataMs)}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
 
         {esito.categoria !== 'esercitazione' && (
           <View style={styles.firme} wrap={false}>

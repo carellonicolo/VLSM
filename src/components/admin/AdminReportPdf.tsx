@@ -18,19 +18,26 @@ const s = StyleSheet.create({
   cat: { fontSize: 11, fontWeight: 'bold', color: '#0b3d91', marginTop: 12, marginBottom: 4 },
 });
 
-const COLS: { label: string; flex: number; key: keyof EsitoSommario | 'durataMin' | 'data' }[] = [
-  { label: 'Nome', flex: 2, key: 'nome' },
-  { label: 'Classe', flex: 1, key: 'classe' },
-  { label: 'Verifica', flex: 1.5, key: 'verificaTitolo' },
-  { label: 'Voto /30', flex: 0.7, key: 'voto30' },
-  { label: 'Voto /10', flex: 0.7, key: 'voto10' },
-  { label: 'Durata', flex: 0.8, key: 'durataMin' },
-  { label: 'Consegna', flex: 1.2, key: 'data' },
+const COLS: { label: string; flex: number; key: keyof EsitoSommario | 'durataMin' | 'data' | 'distrazioni' }[] = [
+  { label: 'Nome', flex: 1.8, key: 'nome' },
+  { label: 'Classe', flex: 0.8, key: 'classe' },
+  { label: 'Verifica', flex: 1.3, key: 'verificaTitolo' },
+  { label: 'Voto /30', flex: 0.6, key: 'voto30' },
+  { label: 'Voto /10', flex: 0.6, key: 'voto10' },
+  { label: 'Durata', flex: 0.7, key: 'durataMin' },
+  { label: 'Distrazioni', flex: 0.9, key: 'distrazioni' },
+  { label: 'Consegna', flex: 1.1, key: 'data' },
 ];
 
 function rowValue(r: EsitoSommario, key: typeof COLS[number]['key']): string {
   if (key === 'durataMin') return `${Math.round(r.durataMs / 60000)} min`;
   if (key === 'data') return new Date(r.consegnatoAt).toLocaleString('it-IT');
+  if (key === 'distrazioni') {
+    const eventi = r.eventiFocus ?? [];
+    if (eventi.length === 0) return '0';
+    const sec = Math.round(eventi.reduce((a, e) => a + e.durataMs, 0) / 1000);
+    return `${eventi.length} (${sec}s)`;
+  }
   const v = (r as unknown as Record<string, unknown>)[key];
   return String(v ?? '');
 }
