@@ -41,6 +41,17 @@ export function StudentInfoScreen({ durataMin, categoria, onStart }: Props) {
           ? 'Inserisci i tuoi dati e scegli il livello. Verrà sorteggiata una simulazione tra quelle disponibili per quel livello. Le simulazioni non valgono come verifica ufficiale.'
           : 'Inserisci nome, classe e durata. All\'avvio verrà sorteggiata casualmente una delle verifiche disponibili.'}
       </p>
+
+      {!isEsercitazione && (
+        <div className="warn-banner">
+          <strong>⚠️ ATTENZIONE — La verifica è monitorata</strong>
+          <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.9rem' }}>
+            Durante lo svolgimento il sistema registra ogni volta che esci dalla pagina (cambio scheda, minimizzazione,
+            apertura di altre applicazioni). Il numero di abbandoni e la durata totale lontano dalla pagina
+            saranno <strong>visibili sul PDF firmato</strong> e consegnati al docente.
+          </p>
+        </div>
+      )}
       <div className="field-row">
         <div className="field">
           <label htmlFor="nome">Nome e cognome</label>

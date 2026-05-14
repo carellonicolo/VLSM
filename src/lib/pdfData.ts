@@ -1,4 +1,4 @@
-import type { EsitoFinale } from '../types/domain';
+import type { EsitoFinale, EventoFocus } from '../types/domain';
 
 export interface EsitoSommario {
   schema: 1;
@@ -14,6 +14,7 @@ export interface EsitoSommario {
   consegnatoAt: string;
   motivoConsegna: EsitoFinale['motivoConsegna'];
   esercizi: { id: string; titolo: string; punteggio: number; puntiMax: number }[];
+  eventiFocus: EventoFocus[];
 }
 
 export interface PdfEnvelope {
@@ -45,6 +46,7 @@ export function buildSommario(esito: EsitoFinale): EsitoSommario {
       punteggio: Math.round(e.punteggio * 10) / 10,
       puntiMax: e.puntiMax,
     })),
+    eventiFocus: esito.eventiFocus ?? [],
   };
 }
 
@@ -77,9 +79,15 @@ export function decodeEnvelope(s: string | undefined | null): PdfEnvelope | null
   const payload = s.slice(idx + PREFIX.length).trim();
   try {
     const parsed = JSON.parse(base64ToUtf8(payload));
-    if (parsed?.schemaEnv === 2 && parsed.payload?.schema === 1) return parsed as PdfEnvelope;
+    if (parsed?.schemaEnv === 2 && parsed.payload?.schema === 1) {
+      const env = parsed as PdfEnvelope;
+      if (!Array.isArray(env.payload.eventiFocus)) env.payload.eventiFocus = [];
+      return env;
+    }
     if (parsed?.schema === 1 && typeof parsed.nome === 'string') {
-      return { schemaEnv: 2, payload: parsed as EsitoSommario };
+      const sommario = parsed as EsitoSommario;
+      if (!Array.isArray(sommario.eventiFocus)) sommario.eventiFocus = [];
+      return { schemaEnv: 2, payload: sommario };
     }
     return null;
   } catch {

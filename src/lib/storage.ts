@@ -1,4 +1,4 @@
-import type { Categoria, DatiStudente, EsitoFinale, RispostaStudente, VerificaId } from '../types/domain';
+import type { Categoria, DatiStudente, EsitoFinale, EventoFocus, RispostaStudente, VerificaId } from '../types/domain';
 
 const KEY = 'vlsm_session';
 
@@ -15,6 +15,7 @@ export interface PersistedSession {
   answers?: RispostaStudente;
   esito?: EsitoFinale;
   startedAt?: string;
+  eventiFocus?: EventoFocus[];
 }
 
 export function readSession(): PersistedSession | null {

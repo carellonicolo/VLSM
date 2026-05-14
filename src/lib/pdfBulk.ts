@@ -65,10 +65,13 @@ export function toCsv(rows: EsitoSommario[]): string {
   const header = [
     'Nome', 'Classe', 'Categoria', 'Verifica', 'Voto/30', 'Voto/10',
     'Inizio', 'Fine', 'Durata (min)', 'Modalità consegna',
+    'Distrazioni', 'Tempo fuori focus (s)',
   ];
   const escape = (s: string) => `"${String(s).replace(/"/g, '""')}"`;
   const lines = [header.map(escape).join(';')];
   for (const r of rows) {
+    const eventi = r.eventiFocus ?? [];
+    const tempoFuoriS = Math.round(eventi.reduce((a, e) => a + e.durataMs, 0) / 1000);
     lines.push(
       [
         r.nome,
@@ -81,6 +84,8 @@ export function toCsv(rows: EsitoSommario[]): string {
         new Date(r.consegnatoAt).toLocaleString('it-IT'),
         Math.round(r.durataMs / 60000),
         r.motivoConsegna,
+        eventi.length,
+        tempoFuoriS,
       ].map((v) => escape(String(v ?? ''))).join(';')
     );
   }

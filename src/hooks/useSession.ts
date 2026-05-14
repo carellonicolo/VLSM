@@ -3,6 +3,7 @@ import type {
   Categoria,
   DatiStudente,
   EsitoFinale,
+  EventoFocus,
   RispostaEsercizio,
   RispostaRiga,
   VerificaId,
@@ -50,6 +51,14 @@ export function useSession() {
       deadlineMs: Date.now() + minuti * 60_000,
       answers: { verificaId, esercizi: {} },
       startedAt: new Date().toISOString(),
+      eventiFocus: [],
+    }));
+  }, []);
+
+  const addEventoFocus = useCallback((evento: EventoFocus) => {
+    setSession((s) => ({
+      ...s,
+      eventiFocus: [...(s.eventiFocus ?? []), evento],
     }));
   }, []);
 
@@ -115,5 +124,6 @@ export function useSession() {
     setEsito,
     reset,
     setCategoria,
+    addEventoFocus,
   };
 }

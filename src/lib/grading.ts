@@ -466,7 +466,8 @@ export function gradeVerifica(
   studente: DatiStudente,
   motivoConsegna: MotivoConsegna,
   dataConsegna: Date = new Date(),
-  startedAt?: Date
+  startedAt?: Date,
+  eventiFocus: import('../types/domain').EventoFocus[] = []
 ): EsitoFinale {
   const esercizi = v.esercizi.map((e) => gradeEsercizio(e, r.esercizi[e.id]));
   const voto30 = Math.round(esercizi.reduce((s, e) => s + e.punteggio, 0) * 10) / 10;
@@ -486,5 +487,6 @@ export function gradeVerifica(
     consegnatoAt: dataConsegna.toISOString(),
     durataMs,
     motivoConsegna,
+    eventiFocus,
   };
 }

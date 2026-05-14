@@ -219,6 +219,7 @@ function SezioneTabella({ titolo, rows, esercitazione = false }: { titolo: strin
               <th>Voto /30</th>
               <th>Voto /10</th>
               <th>Durata</th>
+              <th>Distrazioni</th>
               <th>Consegna</th>
               <th>Modalità</th>
             </tr>
@@ -226,8 +227,10 @@ function SezioneTabella({ titolo, rows, esercitazione = false }: { titolo: strin
           <tbody>
             {rows.map((p, i) => {
               const r = p.sommario!;
+              const eventi = r.eventiFocus ?? [];
+              const tempoFuori = eventi.reduce((a, e) => a + e.durataMs, 0);
               return (
-                <tr key={i} style={p.verify === 'invalid' ? { background: '#ffe6e1' } : undefined}>
+                <tr key={i} style={p.verify === 'invalid' ? { background: 'var(--error-bg)' } : undefined}>
                   <td><span style={badgeStyle(p.verify)}>{badgeLabel(p.verify)}</span></td>
                   <td>{r.nome}</td>
                   <td>{r.classe}</td>
@@ -235,6 +238,11 @@ function SezioneTabella({ titolo, rows, esercitazione = false }: { titolo: strin
                   <td><strong>{r.voto30}</strong></td>
                   <td>{r.voto10}</td>
                   <td>{Math.round(r.durataMs / 60000)} min</td>
+                  <td title={eventi.length > 0 ? `Tempo totale fuori focus: ${Math.round(tempoFuori / 1000)}s` : 'Nessuna distrazione'}>
+                    {eventi.length === 0
+                      ? <span style={{ color: 'var(--success)' }}>✓ 0</span>
+                      : <span style={{ color: 'var(--error)', fontWeight: 600 }}>⚠ {eventi.length} ({Math.round(tempoFuori / 1000)}s)</span>}
+                  </td>
                   <td>{new Date(r.consegnatoAt).toLocaleString('it-IT')}</td>
                   <td>{r.motivoConsegna}</td>
                 </tr>
