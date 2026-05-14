@@ -56,6 +56,62 @@ export function ResultScreen({ esito, onNuovaSessione }: Props) {
         </div>
       </div>
 
+      {esito.categoria === 'verifica' && (() => {
+        const eventi = esito.eventiFocus ?? [];
+        const tempoFuori = eventi.reduce((a, e) => a + e.durataMs, 0);
+        if (eventi.length === 0) {
+          return (
+            <div
+              className="card"
+              style={{
+                background: 'var(--success-bg)',
+                borderColor: 'var(--success)',
+                color: 'var(--success)',
+                padding: '0.85rem 1rem',
+              }}
+            >
+              <strong>✓ Note di sessione</strong> — Nessuna distrazione rilevata durante la verifica.
+            </div>
+          );
+        }
+        return (
+          <div
+            className="card"
+            style={{
+              background: 'var(--error-bg)',
+              borderColor: 'var(--error)',
+              color: 'var(--error-text)',
+            }}
+          >
+            <h3 style={{ marginTop: 0, color: 'var(--error)' }}>
+              ⚠ Note di sessione — {eventi.length} abbandono{eventi.length === 1 ? '' : 'i'} della pagina
+            </h3>
+            <p style={{ margin: '0 0 0.75rem 0' }}>
+              Tempo totale lontano dalla verifica: <strong>{formatDuration(tempoFuori)}</strong>.
+              Tutti gli eventi sono stati registrati nel PDF firmato digitalmente che consegnerai al docente.
+            </p>
+            <table className="result-table" style={{ marginBottom: 0 }}>
+              <thead>
+                <tr>
+                  <th style={{ width: '10%' }}>#</th>
+                  <th>Ora di uscita</th>
+                  <th>Durata fuori focus</th>
+                </tr>
+              </thead>
+              <tbody>
+                {eventi.map((e, i) => (
+                  <tr key={i}>
+                    <td className="readonly">{i + 1}</td>
+                    <td>{formatTimeOfDay(e.startedAt)}</td>
+                    <td><strong>{formatDuration(e.durataMs)}</strong></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+      })()}
+
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Dettaglio per esercizio</h3>
         {esito.esercizi.map((e) => (
