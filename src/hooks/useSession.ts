@@ -7,8 +7,7 @@ import type {
   RispostaEsercizio,
   RispostaRiga,
   VerificaId,
-} from '../types/domain';
-import {
+} from '../types/domain';import {
   clearSession,
   readSession,
   writeSession,
@@ -54,6 +53,33 @@ export function useSession() {
       eventiFocus: [],
     }));
   }, []);
+
+  const resumeFromCloud = useCallback(
+    (sessione: {
+      studente: DatiStudente;
+      verificaId: VerificaId;
+      categoria: Categoria;
+      startedAt: string;
+      deadlineAt: string;
+      durationMin: number;
+      answers: import('../types/domain').RispostaStudente;
+      eventiFocus: EventoFocus[];
+    }) => {
+      setSession({
+        version: 1,
+        phase: 'test',
+        studente: sessione.studente,
+        verificaId: sessione.verificaId,
+        durataMin: sessione.durationMin,
+        categoria: sessione.categoria,
+        deadlineMs: new Date(sessione.deadlineAt).getTime(),
+        answers: sessione.answers,
+        startedAt: sessione.startedAt,
+        eventiFocus: sessione.eventiFocus,
+      });
+    },
+    []
+  );
 
   const addEventoFocus = useCallback((evento: EventoFocus) => {
     setSession((s) => ({
@@ -124,6 +150,7 @@ export function useSession() {
   return {
     session,
     startTest,
+    resumeFromCloud,
     updateRiga,
     updateParteC,
     goPhase,

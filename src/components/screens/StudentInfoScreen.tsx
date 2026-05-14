@@ -3,17 +3,20 @@ import type { Categoria, DatiStudente, Difficolta, VerificaId } from '../../type
 import { DIFFICOLTA_ORDER } from '../../types/domain';
 import { pickVerifica } from '../../lib/pickVerifica';
 import { verificheByDifficolta } from '../../data/verifiche';
+import { cloudRecover, type RecoverableSession } from '../../lib/cloudSync';
+import { RecoverModal } from './RecoverModal';
 
 interface Props {
   durataMin: number;
   categoria: Categoria;
   onStart: (studente: DatiStudente, verificaId: VerificaId, durataMin: number) => void;
+  onResume: (sessione: RecoverableSession) => void;
 }
 
 const RAW_DURATA = Number(import.meta.env.VITE_DURATA_DEFAULT_MIN ?? '0');
 const DURATA_BLOCCATA_VERIFICA = Number.isFinite(RAW_DURATA) && RAW_DURATA > 0 ? RAW_DURATA : null;
 
-export function StudentInfoScreen({ durataMin, categoria, onStart }: Props) {
+export function StudentInfoScreen({ durataMin, categoria, onStart, onResume }: Props) {
   const isEsercitazione = categoria === 'esercitazione';
   const durataBloccata = isEsercitazione ? null : DURATA_BLOCCATA_VERIFICA;
 
@@ -21,14 +24,33 @@ export function StudentInfoScreen({ durataMin, categoria, onStart }: Props) {
   const [classe, setClasse] = useState('');
   const [durata, setDurata] = useState(durataBloccata ?? durataMin);
   const [difficolta, setDifficolta] = useState<Difficolta>('Base');
+  const [checkingRecover, setCheckingRecover] = useState(false);
+  const [recoverable, setRecoverable] = useState<RecoverableSession | null>(null);
+  const [recoverConsumed, setRecoverConsumed] = useState(false);
 
   const valid = nome.trim().length >= 2 && classe.trim().length >= 1 && durata > 0;
 
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!valid) return;
+  const startNew = () => {
     const verificaId = pickVerifica(difficolta, categoria);
     onStart({ nome: nome.trim(), classe: classe.trim() }, verificaId, durataBloccata ?? durata);
+  };
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!valid) return;
+    // Le esercitazioni non hanno recupero cloud.
+    if (isEsercitazione || recoverConsumed) {
+      startNew();
+      return;
+    }
+    setCheckingRecover(true);
+    const found = await cloudRecover(nome.trim(), classe.trim());
+    setCheckingRecover(false);
+    if (found) {
+      setRecoverable(found);
+      return;
+    }
+    startNew();
   };
 
   return (
@@ -49,6 +71,10 @@ export function StudentInfoScreen({ durataMin, categoria, onStart }: Props) {
             Durante lo svolgimento il sistema registra ogni volta che esci dalla pagina (cambio scheda, minimizzazione,
             apertura di altre applicazioni). Il numero di abbandoni e la durata totale lontano dalla pagina
             saranno <strong>visibili sul PDF firmato</strong> e consegnati al docente.
+          </p>
+          <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.85rem' }}>
+            Le risposte vengono inoltre <strong>salvate temporaneamente su server Cloudflare cifrato</strong>
+            {' '}per consentirne il recupero in caso di guasto del PC o crash del browser.
           </p>
         </div>
       )}
@@ -99,9 +125,29 @@ export function StudentInfoScreen({ durataMin, categoria, onStart }: Props) {
           />
         </div>
       </div>
-      <button className="btn" type="submit" disabled={!valid} style={{ width: '100%' }}>
-        {isEsercitazione ? 'Sorteggia simulazione e inizia' : 'Sorteggia verifica e inizia'}
+      <button className="btn" type="submit" disabled={!valid || checkingRecover} style={{ width: '100%' }}>
+        {checkingRecover
+          ? '⏳ Verifico se hai una sessione interrotta…'
+          : isEsercitazione
+            ? 'Sorteggia simulazione e inizia'
+            : 'Sorteggia verifica e inizia'}
       </button>
+      {recoverable && (
+        <RecoverModal
+          session={recoverable}
+          onRiprendi={() => {
+            const r = recoverable;
+            setRecoverable(null);
+            onResume(r);
+          }}
+          onNuova={() => {
+            setRecoverable(null);
+            setRecoverConsumed(true);
+            startNew();
+          }}
+          onAnnulla={() => setRecoverable(null)}
+        />
+      )}
     </form>
   );
 }

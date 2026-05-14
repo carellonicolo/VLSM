@@ -1,6 +1,9 @@
 import { useMemo, useState } from 'react';
 import { parseMultiple, toCsv, downloadCsv, type ParsedFile } from '../../lib/pdfBulk';
 import type { VerifyStatus } from '../../lib/pdfSign';
+import { SessionsLive } from './SessionsLive';
+
+type AdminTab = 'live' | 'bulk';
 
 interface Props {
   onExit: () => void;
@@ -44,6 +47,7 @@ function badgeLabel(status: VerifyStatus | undefined): string {
 }
 
 export function AdminScreen({ onExit }: Props) {
+  const [tab, setTab] = useState<AdminTab>('live');
   const [parsing, setParsing] = useState(false);
   const [parsed, setParsed] = useState<ParsedFile[]>([]);
   const [generatingPdf, setGeneratingPdf] = useState(false);
@@ -118,10 +122,31 @@ export function AdminScreen({ onExit }: Props) {
   return (
     <>
       <div className="test-header-bar">
-        <h2 style={{ margin: 0 }}>📊 Modalità docente — correzione bulk</h2>
+        <h2 style={{ margin: 0 }}>📊 Modalità docente</h2>
         <button className="btn btn-secondary" type="button" onClick={onExit}>Esci</button>
       </div>
 
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+        <button
+          className={tab === 'live' ? 'btn' : 'btn btn-secondary'}
+          type="button"
+          onClick={() => setTab('live')}
+        >
+          🟢 Sessioni live (cloud)
+        </button>
+        <button
+          className={tab === 'bulk' ? 'btn' : 'btn btn-secondary'}
+          type="button"
+          onClick={() => setTab('bulk')}
+        >
+          📥 Correzione PDF (bulk)
+        </button>
+      </div>
+
+      {tab === 'live' && <SessionsLive active={tab === 'live'} />}
+
+      {tab === 'bulk' && (
+        <>
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Carica le consegne PDF degli studenti</h3>
         <p className="muted">
@@ -199,6 +224,8 @@ export function AdminScreen({ onExit }: Props) {
 
       {parsed.length > 0 && ok.length === 0 && (
         <div className="card muted">Nessun PDF valido caricato finora.</div>
+      )}
+        </>
       )}
     </>
   );
