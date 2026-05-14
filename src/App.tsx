@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useSession } from './hooks/useSession';
+import { useTheme } from './hooks/useTheme';
 import { LoginScreen } from './components/screens/LoginScreen';
 import { StudentInfoScreen } from './components/screens/StudentInfoScreen';
 import { TestScreen } from './components/screens/TestScreen';
@@ -7,6 +8,7 @@ import { ReviewScreen } from './components/screens/ReviewScreen';
 import { ResultScreen } from './components/screens/ResultScreen';
 import { Header } from './components/ui/Header';
 import { Footer } from './components/ui/Footer';
+import { ThemeToggle } from './components/ui/ThemeToggle';
 import { getVerifica } from './data/verifiche';
 import { gradeVerifica } from './lib/grading';
 import { buildSommario } from './lib/pdfData';
@@ -19,7 +21,10 @@ type AppMode = 'login' | 'student' | 'admin';
 
 export default function App() {
   const { session, startTest, updateRiga, updateParteC, goPhase, setEsito, reset, setCategoria } = useSession();
+  const { theme, toggle: toggleTheme } = useTheme();
   const [mode, setMode] = useState<AppMode>('login');
+
+  const themeToggle = <ThemeToggle theme={theme} onToggle={toggleTheme} />;
 
   const verifica = useMemo(() => (session.verificaId ? getVerifica(session.verificaId) : undefined), [session.verificaId]);
   const categoria = session.categoria ?? 'verifica';
@@ -50,6 +55,7 @@ export default function App() {
   if (mode === 'login' && session.phase !== 'result') {
     return (
       <div className="shell">
+        {themeToggle}
         <Header />
         <LoginScreen
           onSuccess={() => {
@@ -70,6 +76,7 @@ export default function App() {
   if (mode === 'admin') {
     return (
       <div className="shell">
+        {themeToggle}
         <Header />
         <Suspense fallback={<div className="card">Caricamento modalità docente…</div>}>
           <AdminScreen onExit={() => setMode('login')} />
@@ -82,6 +89,7 @@ export default function App() {
   if (session.phase === 'info' || !verifica || !session.studente) {
     return (
       <div className="shell">
+        {themeToggle}
         <Header />
         <StudentInfoScreen
           durataMin={session.durataMin}
@@ -96,6 +104,7 @@ export default function App() {
   if (session.phase === 'test' && session.answers && session.deadlineMs) {
     return (
       <div className="shell">
+        {themeToggle}
         <Header />
         <TestScreen
           verifica={verifica}
@@ -116,6 +125,7 @@ export default function App() {
   if (session.phase === 'review' && session.answers) {
     return (
       <div className="shell">
+        {themeToggle}
         <Header />
         <ReviewScreen
           verifica={verifica}
@@ -132,6 +142,7 @@ export default function App() {
   if (session.phase === 'result' && session.esito) {
     return (
       <div className="shell">
+        {themeToggle}
         <Header />
         <ResultScreen esito={session.esito} onNuovaSessione={() => { reset(); setMode('login'); }} />
         <Footer />
