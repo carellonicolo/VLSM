@@ -83,6 +83,15 @@ export function TestScreen({
         </div>
       )}
 
+      <div className="test-legend">
+        <span className="test-legend-icon" aria-hidden>💡</span>
+        <span>
+          Compila le celle con <span className="legend-sample legend-sample-empty">bordo tratteggiato blu</span>
+          . Le celle <span className="legend-sample legend-sample-readonly">grigie</span> sono di contesto e
+          non vanno modificate.
+        </span>
+      </div>
+
       {verifica.esercizi.map((es) => {
         const ra: RispostaEsercizio | undefined = answers.esercizi[es.id];
         if (es.tipo === 'vlsm-alloc') {
