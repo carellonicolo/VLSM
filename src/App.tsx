@@ -14,6 +14,7 @@ import { ResultScreen } from './components/screens/ResultScreen';
 import { Header } from './components/ui/Header';
 import { Footer } from './components/ui/Footer';
 import { ThemeToggle } from './components/ui/ThemeToggle';
+import { DashboardLink } from './components/ui/DashboardLink';
 import { getVerifica } from './data/verifiche';
 import { gradeVerifica } from './lib/grading';
 import { buildSommario } from './lib/pdfData';
@@ -29,7 +30,12 @@ export default function App() {
   const { theme, toggle: toggleTheme } = useTheme();
   const [mode, setMode] = useState<AppMode>('login');
 
-  const themeToggle = <ThemeToggle theme={theme} onToggle={toggleTheme} />;
+  const themeToggle = (
+    <div className="top-right-toggles">
+      <DashboardLink />
+      <ThemeToggle theme={theme} onToggle={toggleTheme} />
+    </div>
+  );
 
   // Monitora i cambi di focus solo durante la verifica vera e propria.
   const monitorActive = mode === 'student' && session.phase === 'test' && session.categoria === 'verifica';

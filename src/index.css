@@ -473,10 +473,16 @@ label {
   color: var(--primary);
 }
 
-.theme-toggle {
+.top-right-toggles {
   position: fixed;
   top: 0.75rem;
   right: 0.75rem;
+  display: flex;
+  gap: 0.5rem;
+  z-index: 1000;
+}
+
+.theme-toggle {
   width: 40px;
   height: 40px;
   border-radius: 999px;
@@ -488,17 +494,18 @@ label {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-  transition: transform 0.15s, background 0.15s;
+  transition: transform 0.15s, background 0.15s, box-shadow 0.15s;
+  text-decoration: none;
 }
 
 .theme-toggle:hover {
   transform: scale(1.05);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
 }
 
 @media print {
-  .theme-toggle {
+  .top-right-toggles {
     display: none;
   }
 }
