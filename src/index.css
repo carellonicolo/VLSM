@@ -286,6 +286,36 @@ body::before {
 .school-header-inner {
   position: relative;
   z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.school-header-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.school-header-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.school-header-actions .theme-toggle {
+  background: rgba(255, 255, 255, 0.18);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.school-header-actions .theme-toggle:hover {
+  background: rgba(255, 255, 255, 0.3);
 }
 
 .school-header-title {
@@ -769,12 +799,9 @@ label {
 }
 
 .top-right-toggles {
-  position: fixed;
-  top: 0.75rem;
-  right: 0.75rem;
   display: flex;
   gap: 0.5rem;
-  z-index: 1000;
+  align-items: center;
 }
 
 .theme-toggle {

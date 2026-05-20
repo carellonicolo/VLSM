@@ -31,10 +31,10 @@ export default function App() {
   const [mode, setMode] = useState<AppMode>('login');
 
   const themeToggle = (
-    <div className="top-right-toggles">
+    <>
       <DashboardLink />
       <ThemeToggle theme={theme} onToggle={toggleTheme} />
-    </div>
+    </>
   );
 
   // Monitora i cambi di focus solo durante la verifica vera e propria.
@@ -139,8 +139,7 @@ export default function App() {
   if (mode === 'login' && session.phase !== 'result') {
     return (
       <div className="shell">
-        {themeToggle}
-        <Header />
+        <Header actions={themeToggle} />
         <LoginScreen
           onSuccess={() => {
             setCategoria('verifica');
@@ -160,8 +159,7 @@ export default function App() {
   if (mode === 'admin') {
     return (
       <div className="shell">
-        {themeToggle}
-        <Header />
+        <Header actions={themeToggle} />
         <Suspense fallback={<div className="card">Caricamento modalità docente…</div>}>
           <AdminScreen onExit={() => setMode('login')} />
         </Suspense>
@@ -173,8 +171,7 @@ export default function App() {
   if (session.phase === 'info' || !verifica || !session.studente) {
     return (
       <div className="shell">
-        {themeToggle}
-        <Header />
+        <Header actions={themeToggle} />
         <StudentInfoScreen
           durataMin={session.durataMin}
           categoria={categoria}
@@ -189,8 +186,7 @@ export default function App() {
   if (session.phase === 'test' && session.answers && session.deadlineMs) {
     return (
       <div className="shell">
-        {themeToggle}
-        <Header />
+        <Header actions={themeToggle} />
         {categoria === 'verifica' && (
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem' }}>
             <SyncIndicator status={cloud.status} lastSyncAt={cloud.lastSyncAt} />
@@ -217,8 +213,7 @@ export default function App() {
   if (session.phase === 'review' && session.answers) {
     return (
       <div className="shell">
-        {themeToggle}
-        <Header />
+        <Header actions={themeToggle} />
         <ReviewScreen
           verifica={verifica}
           answers={session.answers}
@@ -235,8 +230,7 @@ export default function App() {
   if (session.phase === 'result' && session.esito) {
     return (
       <div className="shell">
-        {themeToggle}
-        <Header />
+        <Header actions={themeToggle} />
         <ResultScreen esito={session.esito} onNuovaSessione={() => { reset(); setMode('login'); }} />
         <Footer />
       </div>
