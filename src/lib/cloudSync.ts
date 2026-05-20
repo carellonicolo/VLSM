@@ -129,6 +129,43 @@ export async function cloudListSessions(state?: string): Promise<{ ok: boolean; 
   }
 }
 
+export interface CloudSessionDetail {
+  id: string;
+  student_name: string;
+  student_class: string;
+  categoria: 'verifica' | 'esercitazione';
+  verifica_id: string;
+  verifica_titolo: string;
+  difficolta: string | null;
+  state: 'in_progress' | 'consegnata' | 'abbandonata';
+  started_at: string;
+  deadline_at: string;
+  consegnato_at: string | null;
+  updated_at: string;
+  duration_min: number;
+  voto30: number | null;
+  signature: string | null;
+  signed_at: string | null;
+  motivo_consegna: string | null;
+  answers: unknown;
+  eventiFocus: { startedAt: string; durataMs: number }[];
+  esito: unknown;
+}
+
+export async function cloudGetSession(id: string): Promise<{ ok: boolean; session?: CloudSessionDetail; error?: string }> {
+  try {
+    const res = await api(`/api/sessions/${encodeURIComponent(id)}`, { method: 'GET' }, 'admin');
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      return { ok: false, error: `HTTP ${res.status}: ${body.slice(0, 200)}` };
+    }
+    const data = (await res.json()) as { session: CloudSessionDetail };
+    return { ok: true, session: data.session };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
 export async function cloudReopenSession(id: string, extendMinutes = 15): Promise<{ ok: boolean; error?: string }> {
   try {
     const res = await api(`/api/sessions/${encodeURIComponent(id)}/reopen`, {

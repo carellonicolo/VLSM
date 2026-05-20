@@ -79,6 +79,7 @@ export function EsercizioAnalisiPianoView({
                     value={parteA[i]?.[c.key] ?? ''}
                     onChange={(e) => onChangeParteA(i, { [c.key]: e.target.value })}
                     autoComplete="off"
+                    placeholder="..."
                   />
                 </td>
               ))}
@@ -107,6 +108,7 @@ export function EsercizioAnalisiPianoView({
                     value={parteB[i]?.[c.key] ?? ''}
                     onChange={(e) => onChangeParteB(i, { [c.key]: e.target.value })}
                     autoComplete="off"
+                    placeholder="..."
                   />
                 </td>
               ))}
