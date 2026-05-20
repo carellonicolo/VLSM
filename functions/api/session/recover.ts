@@ -6,7 +6,7 @@ import { jsonError, jsonOk, normalizeText, requireAuth, type SharedEnv } from '.
  * Filtri: started_at nelle ultime 6 ore, deadline non scaduta da più di 1 ora.
  */
 export const onRequestGet: PagesFunction<SharedEnv> = async ({ request, env }) => {
-  const unauth = requireAuth(request, env, 'student');
+  const unauth = await requireAuth(request, env, 'student');
   if (unauth) return unauth;
 
   const url = new URL(request.url);

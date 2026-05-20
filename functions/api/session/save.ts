@@ -1,4 +1,5 @@
 import { jsonError, jsonOk, normalizeText, requireAuth, sessionIdFor, type SharedEnv } from '../../_lib/shared';
+import { getVerificaEnabled } from '../../_lib/settings';
 
 interface SavePayload {
   clientId: string;
@@ -23,7 +24,7 @@ interface SavePayload {
 }
 
 export const onRequestPost: PagesFunction<SharedEnv> = async ({ request, env }) => {
-  const unauth = requireAuth(request, env, 'student');
+  const unauth = await requireAuth(request, env, 'student');
   if (unauth) return unauth;
 
   let body: SavePayload;
@@ -34,6 +35,20 @@ export const onRequestPost: PagesFunction<SharedEnv> = async ({ request, env }) 
   }
   if (!body || !body.studente?.nome || !body.studente?.classe || !body.verificaId || !body.startedAt) {
     return jsonError(400, 'Campi obbligatori mancanti.');
+  }
+
+  // Se la modalità verifica è disabilitata, blocchiamo solo le NUOVE verifiche
+  // (state='in_progress' senza esito precedente). Le sessioni esistenti possono
+  // continuare a salvare normalmente fino a consegna.
+  if (body.categoria === 'verifica' && body.state === 'in_progress') {
+    const enabled = await getVerificaEnabled(env);
+    if (!enabled) {
+      const id = await sessionIdFor(body.studente.nome, body.studente.classe, body.startedAt);
+      const existing = await env.DB.prepare(`SELECT id FROM sessions WHERE id = ?`).bind(id).first();
+      if (!existing) {
+        return jsonError(403, 'Modalità verifica disattivata dal docente.');
+      }
+    }
   }
 
   const id = await sessionIdFor(body.studente.nome, body.studente.classe, body.startedAt);

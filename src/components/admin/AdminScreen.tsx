@@ -2,8 +2,9 @@ import { useMemo, useState } from 'react';
 import { parseMultiple, toCsv, downloadCsv, type ParsedFile } from '../../lib/pdfBulk';
 import type { VerifyStatus } from '../../lib/pdfSign';
 import { SessionsLive } from './SessionsLive';
+import { SettingsTab } from './SettingsTab';
 
-type AdminTab = 'live' | 'bulk';
+type AdminTab = 'live' | 'bulk' | 'settings';
 
 interface Props {
   onExit: () => void;
@@ -126,7 +127,7 @@ export function AdminScreen({ onExit }: Props) {
         <button className="btn btn-secondary" type="button" onClick={onExit}>Esci</button>
       </div>
 
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
         <button
           className={tab === 'live' ? 'btn' : 'btn btn-secondary'}
           type="button"
@@ -141,9 +142,17 @@ export function AdminScreen({ onExit }: Props) {
         >
           📥 Correzione PDF (bulk)
         </button>
+        <button
+          className={tab === 'settings' ? 'btn' : 'btn btn-secondary'}
+          type="button"
+          onClick={() => setTab('settings')}
+        >
+          ⚙️ Impostazioni
+        </button>
       </div>
 
       {tab === 'live' && <SessionsLive active={tab === 'live'} />}
+      {tab === 'settings' && <SettingsTab active={tab === 'settings'} />}
 
       {tab === 'bulk' && (
         <>

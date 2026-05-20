@@ -130,9 +130,12 @@ L'app sincronizza automaticamente le verifiche degli studenti su un database SQL
    - Nome: `vlsm-sessions` (o quello che preferisci)
    - Annota il `database_id` (UUID)
 
-2. **Applica lo schema**
+2. **Applica gli schemi**
    - Apri il database appena creato → tab **Console**
    - Copia il contenuto di `migrations/0001_init.sql` e clicca **Execute**
+   - Poi `migrations/0002_settings.sql` e di nuovo **Execute** (aggiunge la
+     tabella `settings` per il pannello admin: toggle modalità verifica e
+     cambio password studente da UI).
 
 3. **Collega il DB al progetto Pages**
    - Pages → progetto `vlsm` → **Settings** → **Functions** → sezione **D1 database bindings** → **Add binding**
@@ -141,13 +144,28 @@ L'app sincronizza automaticamente le verifiche degli studenti su un database SQL
    - Salva
 
 4. **Aggiungi le password server-side (Environment variables)**
-   - Le funzioni server (`/api/session/*`, `/api/sessions/*`) richiedono le stesse password che usi sul client, ma con nomi senza prefisso `VITE_`:
-     - `APP_PASSWORD` (=valore di `VITE_APP_PASSWORD`)
+   - Le funzioni server (`/api/session/*`, `/api/sessions/*`, `/api/admin/*`)
+     richiedono le stesse password che usi sul client, ma con nomi senza
+     prefisso `VITE_`:
+     - `APP_PASSWORD` (=valore di `VITE_APP_PASSWORD`) — fallback se non
+       hai mai impostato una password personalizzata dal pannello admin
      - `ADMIN_PASSWORD` (=valore di `VITE_ADMIN_PASSWORD`)
    - Tipo: **Secret** (criptate at rest)
 
 5. **Forza un nuovo deploy**
    - Pages → Deployments → **Create deployment** (oppure pusha un commit)
+
+### Cambio password e toggle verifica da admin
+
+In **Modalità docente** → tab **⚙️ Impostazioni** puoi:
+- **Attivare/disattivare la modalità verifica** in tempo reale: quando OFF
+  gli studenti vedono la sezione "Svolgi la verifica" disabilitata sulla
+  login (esercitazioni libere e accesso docente restano sempre attivi).
+- **Cambiare la password studente** senza redeploy: la nuova vale per i
+  nuovi login. Le sessioni già attive continuano a sincronizzare con la
+  vecchia password per **60 minuti** (grace period) per non disturbare
+  studenti che stanno svolgendo la verifica.
+- Consultare la **cronologia modifiche** (audit log con timestamp e IP).
 
 **Cosa succede senza setup:**
 - L'app continua a funzionare su localStorage

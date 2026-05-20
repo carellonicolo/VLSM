@@ -5,7 +5,7 @@ import { jsonError, jsonOk, requireAuth, type SharedEnv } from '../../_lib/share
  * Lista tutte le sessioni filtrate per stato. Richiede password docente.
  */
 export const onRequestGet: PagesFunction<SharedEnv> = async ({ request, env }) => {
-  const unauth = requireAuth(request, env, 'admin');
+  const unauth = await requireAuth(request, env, 'admin');
   if (unauth) return unauth;
 
   const url = new URL(request.url);
