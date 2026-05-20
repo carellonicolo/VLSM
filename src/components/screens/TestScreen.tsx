@@ -86,9 +86,10 @@ export function TestScreen({
       <div className="test-legend">
         <span className="test-legend-icon" aria-hidden>💡</span>
         <span>
-          Compila le celle con <span className="legend-sample legend-sample-empty">bordo tratteggiato blu</span>
-          . Le celle <span className="legend-sample legend-sample-readonly">grigie</span> sono di contesto e
-          non vanno modificate.
+          <strong>Devi compilare</strong> solo le celle bianche con
+          <span className="legend-sample legend-sample-empty">bordo tratteggiato blu</span>.
+          Le celle <span className="legend-sample legend-sample-readonly">a strisce</span>
+          {' '}sono di contesto e <strong>NON vanno modificate</strong>.
         </span>
       </div>
 

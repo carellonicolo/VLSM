@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   cloudDeleteSession,
+  cloudGetSession,
   cloudListSessions,
   cloudReopenSession,
   type CloudSessionRow,
 } from '../../lib/cloudSync';
 import { formatDuration, formatTimeOfDay } from '../../lib/format';
+import { getVerifica } from '../../data/verifiche';
+import { gradeVerifica } from '../../lib/grading';
+import type { EsitoFinale, MotivoConsegna, RispostaStudente } from '../../types/domain';
 
 const REFRESH_MS = 5000;
 
@@ -80,6 +84,62 @@ export function SessionsLive({ active }: Props) {
     setBusyId(null);
     if (res.ok) void reload();
     else alert(`Errore: ${res.error}`);
+  };
+
+  const onDownloadPdf = async (id: string) => {
+    setBusyId(id);
+    try {
+      const res = await cloudGetSession(id);
+      if (!res.ok || !res.session) {
+        alert(`Errore: ${res.error ?? 'sessione non trovata'}`);
+        return;
+      }
+      const s = res.session;
+
+      // Se esito è già presente (consegnata), usa quello (include la firma originale).
+      // Altrimenti rigrada al volo a partire dalle risposte salvate (snapshot in_progress).
+      let esito: EsitoFinale;
+      if (s.esito && typeof s.esito === 'object') {
+        esito = s.esito as EsitoFinale;
+      } else {
+        const verifica = getVerifica(s.verifica_id);
+        if (!verifica) {
+          alert('Errore: verifica non trovata nel dataset locale.');
+          return;
+        }
+        const startedAt = new Date(s.started_at);
+        const consegnatoAt = s.consegnato_at ? new Date(s.consegnato_at) : new Date(s.updated_at);
+        const motivo: MotivoConsegna = (s.motivo_consegna === 'timeout' ? 'timeout' : 'volontaria');
+        esito = gradeVerifica(
+          verifica,
+          s.answers as RispostaStudente,
+          { nome: s.student_name, classe: s.student_class },
+          motivo,
+          consegnatoAt,
+          startedAt,
+          s.eventiFocus ?? []
+        );
+      }
+
+      const [{ pdf }, { PdfReport }] = await Promise.all([
+        import('@react-pdf/renderer'),
+        import('../pdf/PdfReport'),
+      ]);
+      const blob = await pdf(<PdfReport esito={esito} />).toBlob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const safeName = s.student_name.replace(/[^a-zA-Z0-9_-]+/g, '_');
+      a.href = url;
+      a.download = `vlsm_${safeName}_${s.verifica_id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) {
+      alert(`Errore generazione PDF: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setBusyId(null);
+    }
   };
 
   return (
@@ -163,6 +223,16 @@ export function SessionsLive({ active }: Props) {
                       <td><strong>{r.voto30 != null ? `${r.voto30}/30` : '—'}</strong></td>
                       <td>{r.signed ? '✅' : '—'}</td>
                       <td style={{ whiteSpace: 'nowrap' }}>
+                        <button
+                          className="btn"
+                          type="button"
+                          style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', marginRight: '0.25rem' }}
+                          disabled={busyId === r.id}
+                          onClick={() => onDownloadPdf(r.id)}
+                          title={r.state === 'consegnata' ? 'Scarica il PDF con voto e firma' : 'Scarica uno snapshot PDF con le risposte attuali (senza firma)'}
+                        >
+                          📄 PDF
+                        </button>
                         {r.state === 'consegnata' && (
                           <button
                             className="btn-secondary btn"

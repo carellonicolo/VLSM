@@ -63,6 +63,7 @@ export function EsercizioVlsmAllocView({ esercizio, risposta, onChange }: Props)
                     value={righe[i]?.[c.key] ?? ''}
                     onChange={(e) => onChange(i, { [c.key]: e.target.value })}
                     autoComplete="off"
+                    placeholder="..."
                   />
                 </td>
               ))}
