@@ -23,22 +23,25 @@ export function GuideModal() {
           <span>Guida</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-2xl flex items-center gap-2">
-            <GraduationCap className="h-6 w-6 text-primary" />
-            Guida Completa al Subnetting
-          </DialogTitle>
-          <DialogDescription>
-            Impara il subnetting IPv4 e IPv6 da zero con questa guida passo-passo
-          </DialogDescription>
-        </DialogHeader>
-
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto p-0">
         <Tabs defaultValue="ipv4" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="ipv4">IPv4</TabsTrigger>
-            <TabsTrigger value="ipv6">IPv6</TabsTrigger>
-          </TabsList>
+          <div className="sticky top-0 bg-background border-b px-6 pt-6 pb-3">
+            <DialogHeader className="pr-10">
+              <DialogTitle className="text-2xl flex items-center gap-2">
+                <GraduationCap className="h-6 w-6 text-primary" />
+                Guida Completa al Subnetting
+              </DialogTitle>
+              <DialogDescription>
+                Impara il subnetting IPv4 e IPv6 da zero con questa guida passo-passo
+              </DialogDescription>
+            </DialogHeader>
+            <TabsList className="grid w-full grid-cols-2 mt-4">
+              <TabsTrigger value="ipv4">IPv4</TabsTrigger>
+              <TabsTrigger value="ipv6">IPv6</TabsTrigger>
+            </TabsList>
+          </div>
+
+          <div className="px-6 pb-6">
 
           {/* IPv4 SECTION */}
           <TabsContent value="ipv4" className="space-y-6 py-4">
@@ -1075,6 +1078,7 @@ export function GuideModal() {
               </CardContent>
             </Card>
           </TabsContent>
+          </div>
         </Tabs>
       </DialogContent>
     </Dialog>

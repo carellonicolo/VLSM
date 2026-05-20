@@ -1235,6 +1235,14 @@ label {
   gap: 1.5rem;
 }
 
+/* In dark mode togliamo il bordo grigio sulle Card principali dei
+   calcolatori per un look più pulito. Gli input (border-input) e le card
+   colorate "highlight" (border-primary/...) mantengono il loro bordo. */
+[data-theme='dark'] .calc-content .bg-card.border,
+[data-theme='dark'] .calc-content .bg-card.border-2 {
+  border-color: transparent;
+}
+
 .back-link {
   display: inline-flex;
   align-items: center;
