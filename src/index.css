@@ -101,65 +101,83 @@ body::before {
   pointer-events: none;
   z-index: -1;
   overflow: hidden;
+  contain: layout paint;
 }
 
 .bg-blob {
   position: absolute;
   border-radius: 50%;
-  filter: blur(90px);
+  filter: blur(65px);
   will-change: transform;
 }
 
 .bg-blob-1 {
   top: -180px;
   left: -120px;
-  width: 540px;
-  height: 540px;
-  background: rgba(11, 61, 145, 0.32);
-  animation: bg-blob-1-anim 24s ease-in-out infinite;
+  width: 520px;
+  height: 520px;
+  background: rgba(11, 61, 145, 0.55);
+  animation: bg-blob-1-anim 14s ease-in-out infinite;
 }
 
 .bg-blob-2 {
-  top: 38%;
-  right: -200px;
-  width: 640px;
-  height: 640px;
-  background: rgba(168, 85, 247, 0.22);
-  animation: bg-blob-2-anim 19s ease-in-out infinite;
+  top: 35%;
+  right: -180px;
+  width: 600px;
+  height: 600px;
+  background: rgba(168, 85, 247, 0.42);
+  animation: bg-blob-2-anim 11s ease-in-out infinite;
 }
 
 .bg-blob-3 {
-  bottom: -260px;
-  left: 35%;
-  width: 720px;
-  height: 720px;
-  background: rgba(20, 184, 166, 0.18);
-  animation: bg-blob-3-anim 28s ease-in-out infinite;
+  bottom: -250px;
+  left: 30%;
+  width: 680px;
+  height: 680px;
+  background: rgba(20, 184, 166, 0.32);
+  animation: bg-blob-3-anim 17s ease-in-out infinite;
 }
 
-[data-theme='dark'] .bg-blob-1 { background: rgba(59, 130, 246, 0.4); }
-[data-theme='dark'] .bg-blob-2 { background: rgba(168, 85, 247, 0.32); }
-[data-theme='dark'] .bg-blob-3 { background: rgba(34, 211, 238, 0.24); }
+[data-theme='dark'] .bg-blob-1 { background: rgba(59, 130, 246, 0.6); }
+[data-theme='dark'] .bg-blob-2 { background: rgba(168, 85, 247, 0.5); }
+[data-theme='dark'] .bg-blob-3 { background: rgba(34, 211, 238, 0.4); }
 
 @keyframes bg-blob-1-anim {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33%      { transform: translate(80px, 90px) scale(1.1); }
-  66%      { transform: translate(-30px, 60px) scale(0.92); }
+  0%   { transform: translate(0, 0) scale(1); }
+  25%  { transform: translate(220px, 140px) scale(1.25); }
+  50%  { transform: translate(60px, 280px) scale(0.85); }
+  75%  { transform: translate(-90px, 160px) scale(1.1); }
+  100% { transform: translate(0, 0) scale(1); }
 }
 
 @keyframes bg-blob-2-anim {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50%      { transform: translate(-90px, -70px) scale(1.15); }
+  0%   { transform: translate(0, 0) scale(1); }
+  33%  { transform: translate(-260px, 150px) scale(1.3); }
+  66%  { transform: translate(180px, -110px) scale(0.78); }
+  100% { transform: translate(0, 0) scale(1); }
 }
 
 @keyframes bg-blob-3-anim {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  40%      { transform: translate(70px, -100px) scale(0.88); }
-  75%      { transform: translate(-60px, 40px) scale(1.06); }
+  0%   { transform: translate(0, 0) scale(1); }
+  40%  { transform: translate(200px, -230px) scale(0.8); }
+  70%  { transform: translate(-200px, 110px) scale(1.22); }
+  100% { transform: translate(0, 0) scale(1); }
+}
+
+/* Leggera oscillazione di tonalità sull'intera scena per dare ulteriore
+   senso di vivacità senza essere fastidiosa. */
+.bg-decor {
+  animation: bg-decor-hue 24s ease-in-out infinite;
+}
+
+@keyframes bg-decor-hue {
+  0%, 100% { filter: hue-rotate(0deg); }
+  50%      { filter: hue-rotate(25deg); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .bg-blob { animation: none; }
+  .bg-blob,
+  .bg-decor { animation: none; }
 }
 
 @media print {
@@ -169,6 +187,35 @@ body::before {
   }
   body {
     background: white !important;
+  }
+}
+
+/* Layout login: 3 card affiancate in griglia, stack su mobile */
+.login-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.25rem;
+  max-width: 1080px;
+  margin: 1.25rem auto 0;
+  align-items: stretch;
+}
+
+.login-card {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0;
+}
+
+.login-card .login-card-cta {
+  width: 100%;
+  margin-top: auto;
+}
+
+@media (max-width: 900px) {
+  .login-grid {
+    grid-template-columns: 1fr;
+    max-width: 460px;
+    gap: 1rem;
   }
 }
 

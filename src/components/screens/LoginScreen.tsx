@@ -68,9 +68,9 @@ export function LoginScreen({ onSuccess, onEsercitazione, onAdmin }: Props) {
   };
 
   return (
-    <div style={{ maxWidth: 460, margin: '2rem auto' }}>
+    <div className="login-grid">
       <form
-        className="card"
+        className="card login-card"
         onSubmit={submitStudent}
         style={verificaEnabled ? undefined : { opacity: 0.55, pointerEvents: 'none' }}
         aria-disabled={!verificaEnabled}
@@ -79,7 +79,7 @@ export function LoginScreen({ onSuccess, onEsercitazione, onAdmin }: Props) {
         {!verificaEnabled ? (
           <p className="error-msg" style={{ background: 'var(--warn-bg)', color: 'var(--warn-text)', border: '1px solid var(--warn-border)', padding: '0.6rem 0.8rem', borderRadius: 6 }}>
             ⚠ Modalità verifica temporaneamente disattivata dal docente.
-            Riprova più tardi o usa la modalità esercitazione qui sotto.
+            Riprova più tardi o usa la modalità esercitazione qui a fianco.
           </p>
         ) : (
           <p className="muted">Sezione per gli studenti. Inserisci la password fornita dal docente per iniziare.</p>
@@ -97,12 +97,12 @@ export function LoginScreen({ onSuccess, onEsercitazione, onAdmin }: Props) {
           />
           {errStudent && <div className="error-msg">{errStudent}</div>}
         </div>
-        <button className="btn" type="submit" style={{ width: '100%' }} disabled={!verificaEnabled || loadingStudent}>
+        <button className="btn login-card-cta" type="submit" disabled={!verificaEnabled || loadingStudent}>
           {loadingStudent ? 'Verifica password…' : 'Entra nella verifica'}
         </button>
       </form>
 
-      <form className="card" onSubmit={submitAdmin} style={{ marginTop: '1rem' }}>
+      <form className="card login-card" onSubmit={submitAdmin}>
         <h2 style={{ marginTop: 0 }}>📊 Correzione bulk (docente)</h2>
         <p className="muted">
           Sezione riservata al docente. Carica i PDF, gestisci le sessioni live e configura le impostazioni.
@@ -118,18 +118,19 @@ export function LoginScreen({ onSuccess, onEsercitazione, onAdmin }: Props) {
           />
           {errAdmin && <div className="error-msg">{errAdmin}</div>}
         </div>
-        <button className="btn btn-secondary" type="submit" style={{ width: '100%' }}>
+        <button className="btn btn-secondary login-card-cta" type="submit">
           Entra in modalità docente
         </button>
       </form>
 
-      <div className="card" style={{ marginTop: '1rem', textAlign: 'center' }}>
-        <h3 style={{ marginTop: 0, fontSize: '1rem' }}>🎯 Vuoi solo esercitarti?</h3>
-        <p className="muted" style={{ margin: '0.5rem 0 1rem' }}>
-          Le simulazioni sono libere e non richiedono password. Non valgono come verifica ufficiale.
+      <div className="card login-card" style={{ textAlign: 'center' }}>
+        <h2 style={{ marginTop: 0 }}>🎯 Esercitazione</h2>
+        <p className="muted">
+          Le simulazioni sono libere e <strong>non richiedono password</strong>. Non valgono come verifica
+          ufficiale: sono pensate per esercitarti in autonomia.
         </p>
-        <button className="btn btn-secondary" type="button" onClick={onEsercitazione} style={{ width: '100%' }}>
-          Modalità esercitazione
+        <button className="btn btn-secondary login-card-cta" type="button" onClick={onEsercitazione}>
+          Inizia esercitazione
         </button>
       </div>
     </div>
