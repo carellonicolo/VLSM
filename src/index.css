@@ -1,3 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Variabili shadcn/ui per i calcolatori (portati da Subnet).
+   Prefisso --sc-* per non collidere con quelle VLSM (--bg, --primary, ecc.). */
+:root {
+  --sc-background: 0 0% 100%;
+  --sc-foreground: 222.2 84% 4.9%;
+  --sc-card: 0 0% 100%;
+  --sc-card-foreground: 222.2 84% 4.9%;
+  --sc-popover: 0 0% 100%;
+  --sc-popover-foreground: 222.2 84% 4.9%;
+  --sc-primary: 221.2 83.2% 53.3%;
+  --sc-primary-foreground: 210 40% 98%;
+  --sc-secondary: 210 40% 96.1%;
+  --sc-secondary-foreground: 222.2 47.4% 11.2%;
+  --sc-muted: 210 40% 96.1%;
+  --sc-muted-foreground: 215.4 16.3% 46.9%;
+  --sc-accent: 210 40% 96.1%;
+  --sc-accent-foreground: 222.2 47.4% 11.2%;
+  --sc-destructive: 0 84.2% 60.2%;
+  --sc-destructive-foreground: 210 40% 98%;
+  --sc-border: 214.3 31.8% 91.4%;
+  --sc-input: 214.3 31.8% 91.4%;
+  --sc-ring: 221.2 83.2% 53.3%;
+  --sc-radius: 0.5rem;
+  --sc-chart-1: 12 76% 61%;
+  --sc-chart-2: 173 58% 39%;
+  --sc-chart-3: 197 37% 24%;
+  --sc-chart-4: 43 74% 66%;
+  --sc-chart-5: 27 87% 67%;
+}
+
+.dark {
+  --sc-background: 222.2 84% 4.9%;
+  --sc-foreground: 210 40% 98%;
+  --sc-card: 222.2 84% 4.9%;
+  --sc-card-foreground: 210 40% 98%;
+  --sc-popover: 222.2 84% 4.9%;
+  --sc-popover-foreground: 210 40% 98%;
+  --sc-primary: 217.2 91.2% 59.8%;
+  --sc-primary-foreground: 222.2 47.4% 11.2%;
+  --sc-secondary: 217.2 32.6% 17.5%;
+  --sc-secondary-foreground: 210 40% 98%;
+  --sc-muted: 217.2 32.6% 17.5%;
+  --sc-muted-foreground: 215 20.2% 65.1%;
+  --sc-accent: 217.2 32.6% 17.5%;
+  --sc-accent-foreground: 210 40% 98%;
+  --sc-destructive: 0 62.8% 30.6%;
+  --sc-destructive-foreground: 210 40% 98%;
+  --sc-border: 217.2 32.6% 17.5%;
+  --sc-input: 217.2 32.6% 17.5%;
+  --sc-ring: 224.3 76.3% 48%;
+  --sc-chart-1: 220 70% 50%;
+  --sc-chart-2: 160 60% 45%;
+  --sc-chart-3: 30 80% 55%;
+  --sc-chart-4: 280 65% 60%;
+  --sc-chart-5: 340 75% 55%;
+}
+
 :root {
   --bg: #f4f6fa;
   --fg: #1a2233;
@@ -1037,3 +1098,196 @@ label {
     display: none;
   }
 }
+
+/* ============================================================
+   LANDING / HOMEPAGE — menu di sezione
+   ============================================================ */
+
+.landing {
+  max-width: 1080px;
+  margin: 0 auto;
+}
+
+.landing-intro {
+  text-align: center;
+  margin: 1rem auto 2rem;
+  max-width: 720px;
+}
+
+.landing-title {
+  font-size: clamp(1.6rem, 2.5vw, 2.2rem);
+  font-weight: 700;
+  margin: 0 0 0.5rem;
+  color: var(--fg);
+}
+
+.landing-subtitle {
+  margin: 0;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.landing-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+@media (max-width: 720px) {
+  .landing-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.landing-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 1.4rem 1.4rem 1.2rem;
+  text-decoration: none;
+  color: inherit;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease;
+  cursor: pointer;
+}
+
+.landing-card:hover,
+.landing-card:focus-visible {
+  transform: translateY(-3px);
+  border-color: var(--primary);
+  box-shadow: 0 8px 24px rgba(11, 61, 145, 0.12);
+  outline: none;
+}
+
+[data-theme='dark'] .landing-card:hover,
+[data-theme='dark'] .landing-card:focus-visible {
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.18);
+}
+
+.landing-card-icon {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.landing-card-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--fg);
+}
+
+.landing-card-text {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+  font-size: 0.92rem;
+  flex: 1;
+}
+
+.landing-card-cta {
+  margin-top: 0.4rem;
+  color: var(--primary);
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+/* ============================================================
+   PAGINA CALCOLATORI
+   ============================================================ */
+
+.calcolatori-page {
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.calcolatori-breadcrumb {
+  margin-bottom: 0.5rem;
+}
+
+.calcolatori-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+}
+
+.calcolatori-hero {
+  text-align: center;
+  margin: 0.5rem auto 1.5rem;
+  max-width: 720px;
+}
+
+.calcolatori-hero-title {
+  font-size: clamp(1.5rem, 2.4vw, 2rem);
+  font-weight: 700;
+  margin: 0 0 0.4rem;
+  color: var(--fg);
+}
+
+.calcolatori-hero-subtitle {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.calcolatori-hero-title .accent {
+  background: linear-gradient(90deg, #0b3d91, #6b3fa0);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+[data-theme='dark'] .calcolatori-hero-title .accent {
+  background: linear-gradient(90deg, #3b82f6, #a855f7);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--primary);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.back-link:hover {
+  text-decoration: underline;
+}
+
+/* ============================================================
+   LOGIN GATE (variante a card singola per /verifica e /admin)
+   ============================================================ */
+
+.login-grid-single {
+  grid-template-columns: 1fr;
+  max-width: 460px;
+}
+
+.login-back-row {
+  grid-column: 1 / -1;
+  margin-bottom: 0.25rem;
+}
+
+/* ============================================================
+   COMPATIBILITÀ TAILWIND × VLSM
+   I componenti shadcn portati usano testo bianco/primary su sfondo
+   hsl(var(--sc-*)); ci assicuriamo che le card abbiano sfondo opaco
+   anche se inseriti sopra il gradiente animato dell'app.
+   ============================================================ */
+.calcolatori-page [data-radix-popper-content-wrapper] {
+  z-index: 60;
+}
+

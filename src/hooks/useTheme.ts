@@ -20,7 +20,11 @@ export function useTheme() {
   const [theme, setTheme] = useState<Theme>(getInitialTheme);
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
+    const root = document.documentElement;
+    root.setAttribute('data-theme', theme);
+    // Mantiene allineata anche la classe `dark` su <html>, necessaria
+    // ai componenti Tailwind dei calcolatori (Subnet) che usano `dark:`.
+    root.classList.toggle('dark', theme === 'dark');
     try {
       localStorage.setItem(KEY, theme);
     } catch {
