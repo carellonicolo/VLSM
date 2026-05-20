@@ -1,11 +1,15 @@
 /**
  * Helpers condivisi tra le Pages Functions.
- * Auth basata sui due secrets passati come variabili d'ambiente Cloudflare:
- *  - APP_PASSWORD       → password studenti (anche VITE_APP_PASSWORD)
- *  - ADMIN_PASSWORD     → password docente (anche VITE_ADMIN_PASSWORD)
+ * Auth basata sulle password lette da:
+ *  - D1 settings table (override runtime)
+ *  - oppure fallback env vars (APP_PASSWORD / ADMIN_PASSWORD, anche VITE_*)
  *
  * Le richieste devono includere l'header `X-VLSM-Auth: <password>`.
+ * Per gli studenti, la password "precedente" è accettata per 60 minuti
+ * dopo un cambio (grace period per non rompere sessioni in corso).
  */
+
+import { getStudentAuth } from './settings';
 
 export interface SharedEnv {
   DB: D1Database;
@@ -17,22 +21,24 @@ export interface SharedEnv {
 
 export type Role = 'student' | 'admin';
 
-function getPassword(env: SharedEnv, role: Role): string | undefined {
-  return role === 'admin'
-    ? env.ADMIN_PASSWORD ?? env.VITE_ADMIN_PASSWORD
-    : env.APP_PASSWORD ?? env.VITE_APP_PASSWORD;
-}
-
-export function requireAuth(request: Request, env: SharedEnv, role: Role): Response | null {
-  const expected = getPassword(env, role);
-  if (!expected) {
-    return jsonError(503, `Password ${role} non configurata sul server.`);
-  }
+export async function requireAuth(request: Request, env: SharedEnv, role: Role): Promise<Response | null> {
   const provided = request.headers.get('x-vlsm-auth') ?? '';
-  if (!constantTimeEqual(provided, expected)) {
+
+  if (role === 'admin') {
+    const expected = env.ADMIN_PASSWORD ?? env.VITE_ADMIN_PASSWORD ?? '';
+    if (!expected) return jsonError(503, 'Password admin non configurata sul server.');
+    if (constantTimeEqual(provided, expected)) return null;
     return jsonError(401, 'Non autorizzato.');
   }
-  return null;
+
+  // student
+  const auth = await getStudentAuth(env);
+  if (!auth.current) return jsonError(503, 'Password studente non configurata sul server.');
+  if (constantTimeEqual(provided, auth.current)) return null;
+  if (auth.previous && auth.previousValidUntilMs && Date.now() < auth.previousValidUntilMs && constantTimeEqual(provided, auth.previous)) {
+    return null; // accettata in grace period (sessione già attiva)
+  }
+  return jsonError(401, 'Non autorizzato.');
 }
 
 function constantTimeEqual(a: string, b: string): boolean {

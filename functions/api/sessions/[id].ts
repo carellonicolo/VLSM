@@ -8,7 +8,7 @@ import { jsonError, jsonOk, requireAuth, type SharedEnv } from '../../_lib/share
  * Solo password docente.
  */
 export const onRequestGet: PagesFunction<SharedEnv> = async ({ params, request, env }) => {
-  const unauth = requireAuth(request, env, 'admin');
+  const unauth = await requireAuth(request, env, 'admin');
   if (unauth) return unauth;
 
   const id = String(params.id ?? '');
@@ -34,7 +34,7 @@ export const onRequestGet: PagesFunction<SharedEnv> = async ({ params, request, 
 };
 
 export const onRequestDelete: PagesFunction<SharedEnv> = async ({ params, request, env }) => {
-  const unauth = requireAuth(request, env, 'admin');
+  const unauth = await requireAuth(request, env, 'admin');
   if (unauth) return unauth;
 
   const id = String(params.id ?? '');

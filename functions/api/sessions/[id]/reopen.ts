@@ -10,7 +10,7 @@ interface ReopenBody {
  * Setta state='in_progress' su una sessione consegnata.
  */
 export const onRequestPost: PagesFunction<SharedEnv> = async ({ params, request, env }) => {
-  const unauth = requireAuth(request, env, 'admin');
+  const unauth = await requireAuth(request, env, 'admin');
   if (unauth) return unauth;
 
   const id = String(params.id ?? '');
