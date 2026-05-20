@@ -1,5 +1,3 @@
-
-
 import { useState } from 'react';
 import { ClipboardList, Brain, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import {

@@ -1,5 +1,3 @@
-
-
 import { BookOpen, Binary, Network, Calculator, Lightbulb, GraduationCap } from 'lucide-react';
 import {
   Dialog,

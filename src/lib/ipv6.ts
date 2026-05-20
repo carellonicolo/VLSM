@@ -40,6 +40,9 @@ export function isValidIPv6(ip: string): boolean {
   // Remove leading/trailing whitespace
   ip = ip.trim();
 
+  // Tre o più due-punti consecutivi (es. `2001:db8:::1`) sono sempre malformati.
+  if (/:{3,}/.test(ip)) return false;
+
   // Check for IPv4-mapped IPv6
   const ipv4MappedRegex = /^::ffff:(\d{1,3}\.){3}\d{1,3}$/i;
   if (ipv4MappedRegex.test(ip)) {

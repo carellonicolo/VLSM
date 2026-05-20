@@ -1,5 +1,3 @@
-
-
 import { useState } from 'react';
 import { Calculator, Info, FileDown, Copy, Check } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
