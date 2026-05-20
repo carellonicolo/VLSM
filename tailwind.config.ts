@@ -7,49 +7,53 @@ const config: Config = {
   // shadcn UI, modali). Il resto di VLSM continua a usare il proprio CSS in
   // src/index.css. Per evitare collisioni di nomi (--primary, --border, ecc.)
   // le variabili shadcn sono prefissate con --sc-*.
+  //
+  // La sintassi `hsl(var(--sc-xxx) / <alpha-value>)` è necessaria per
+  // supportare i modificatori di opacità di Tailwind (es. `bg-card/50`,
+  // `hover:bg-primary/90`), usati massicciamente dai componenti shadcn.
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
-        background: 'hsl(var(--sc-background))',
-        foreground: 'hsl(var(--sc-foreground))',
+        background: 'hsl(var(--sc-background) / <alpha-value>)',
+        foreground: 'hsl(var(--sc-foreground) / <alpha-value>)',
         card: {
-          DEFAULT: 'hsl(var(--sc-card))',
-          foreground: 'hsl(var(--sc-card-foreground))',
+          DEFAULT: 'hsl(var(--sc-card) / <alpha-value>)',
+          foreground: 'hsl(var(--sc-card-foreground) / <alpha-value>)',
         },
         popover: {
-          DEFAULT: 'hsl(var(--sc-popover))',
-          foreground: 'hsl(var(--sc-popover-foreground))',
+          DEFAULT: 'hsl(var(--sc-popover) / <alpha-value>)',
+          foreground: 'hsl(var(--sc-popover-foreground) / <alpha-value>)',
         },
         primary: {
-          DEFAULT: 'hsl(var(--sc-primary))',
-          foreground: 'hsl(var(--sc-primary-foreground))',
+          DEFAULT: 'hsl(var(--sc-primary) / <alpha-value>)',
+          foreground: 'hsl(var(--sc-primary-foreground) / <alpha-value>)',
         },
         secondary: {
-          DEFAULT: 'hsl(var(--sc-secondary))',
-          foreground: 'hsl(var(--sc-secondary-foreground))',
+          DEFAULT: 'hsl(var(--sc-secondary) / <alpha-value>)',
+          foreground: 'hsl(var(--sc-secondary-foreground) / <alpha-value>)',
         },
         muted: {
-          DEFAULT: 'hsl(var(--sc-muted))',
-          foreground: 'hsl(var(--sc-muted-foreground))',
+          DEFAULT: 'hsl(var(--sc-muted) / <alpha-value>)',
+          foreground: 'hsl(var(--sc-muted-foreground) / <alpha-value>)',
         },
         accent: {
-          DEFAULT: 'hsl(var(--sc-accent))',
-          foreground: 'hsl(var(--sc-accent-foreground))',
+          DEFAULT: 'hsl(var(--sc-accent) / <alpha-value>)',
+          foreground: 'hsl(var(--sc-accent-foreground) / <alpha-value>)',
         },
         destructive: {
-          DEFAULT: 'hsl(var(--sc-destructive))',
-          foreground: 'hsl(var(--sc-destructive-foreground))',
+          DEFAULT: 'hsl(var(--sc-destructive) / <alpha-value>)',
+          foreground: 'hsl(var(--sc-destructive-foreground) / <alpha-value>)',
         },
-        border: 'hsl(var(--sc-border))',
-        input: 'hsl(var(--sc-input))',
-        ring: 'hsl(var(--sc-ring))',
+        border: 'hsl(var(--sc-border) / <alpha-value>)',
+        input: 'hsl(var(--sc-input) / <alpha-value>)',
+        ring: 'hsl(var(--sc-ring) / <alpha-value>)',
         chart: {
-          1: 'hsl(var(--sc-chart-1))',
-          2: 'hsl(var(--sc-chart-2))',
-          3: 'hsl(var(--sc-chart-3))',
-          4: 'hsl(var(--sc-chart-4))',
-          5: 'hsl(var(--sc-chart-5))',
+          1: 'hsl(var(--sc-chart-1) / <alpha-value>)',
+          2: 'hsl(var(--sc-chart-2) / <alpha-value>)',
+          3: 'hsl(var(--sc-chart-3) / <alpha-value>)',
+          4: 'hsl(var(--sc-chart-4) / <alpha-value>)',
+          5: 'hsl(var(--sc-chart-5) / <alpha-value>)',
         },
       },
       borderRadius: {

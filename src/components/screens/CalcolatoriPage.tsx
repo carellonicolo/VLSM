@@ -1,7 +1,7 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Network, Calculator, Eye } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SubnetCalculator } from '@/components/calcolatori/SubnetCalculator';
 import { VLSMCalculator } from '@/components/calcolatori/VLSMCalculator';
 import { FLSMCalculator } from '@/components/calcolatori/FLSMCalculator';
@@ -25,8 +25,22 @@ const ConverterModal = lazy(() =>
   import('@/components/calcolatori/modals/ConverterModal').then((m) => ({ default: m.ConverterModal }))
 );
 
+type Protocol = 'ipv4' | 'ipv6';
+type Tool = 'calculator' | 'flsm' | 'vlsm' | 'visualizer';
+
 export function CalcolatoriPage() {
   const { theme, toggle } = useTheme();
+  const [protocol, setProtocol] = useState<Protocol>('ipv4');
+  const [tool, setTool] = useState<Tool>('calculator');
+
+  const handleProtocolChange = (value: string) => {
+    const next = value as Protocol;
+    setProtocol(next);
+    // FLSM non esiste per IPv6: rimbalza al calcolatore base.
+    if (next === 'ipv6' && tool === 'flsm') {
+      setTool('calculator');
+    }
+  };
 
   return (
     <div className="shell">
@@ -52,90 +66,51 @@ export function CalcolatoriPage() {
           </Suspense>
         </div>
 
-        <div className="calcolatori-hero">
-          <h2 className="calcolatori-hero-title">
-            Strumento per il <span className="accent">calcolo delle subnet</span>
-          </h2>
-          <p className="calcolatori-hero-subtitle">
-            Calcola subnet IPv4 e IPv6, VLSM, FLSM e visualizza la divisione di rete.
-          </p>
-        </div>
-
-        <Tabs defaultValue="ipv4" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 lg:w-auto lg:inline-grid h-auto p-1">
-            <TabsTrigger value="ipv4" className="gap-2">
-              <span className="font-semibold">IPv4</span>
-            </TabsTrigger>
-            <TabsTrigger value="ipv6" className="gap-2">
-              <span className="font-semibold">IPv6</span>
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="ipv4" className="space-y-6">
-            <Tabs defaultValue="calculator" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid h-auto p-1">
-                <TabsTrigger value="calculator" className="gap-2">
-                  <Calculator className="h-4 w-4" />
-                  <span>Calculator</span>
-                </TabsTrigger>
+        <div className="calc-tabs-bar">
+          <Tabs value={tool} onValueChange={(v) => setTool(v as Tool)}>
+            <TabsList className="h-auto p-1">
+              <TabsTrigger value="calculator" className="gap-2">
+                <Calculator className="h-4 w-4" />
+                <span>Calculator</span>
+              </TabsTrigger>
+              {protocol === 'ipv4' && (
                 <TabsTrigger value="flsm" className="gap-2">
                   <Network className="h-4 w-4" />
                   <span>FLSM</span>
                 </TabsTrigger>
-                <TabsTrigger value="vlsm" className="gap-2">
-                  <Network className="h-4 w-4" />
-                  <span>VLSM</span>
-                </TabsTrigger>
-                <TabsTrigger value="visualizer" className="gap-2">
-                  <Eye className="h-4 w-4" />
-                  <span>Visualizer</span>
-                </TabsTrigger>
-              </TabsList>
+              )}
+              <TabsTrigger value="vlsm" className="gap-2">
+                <Network className="h-4 w-4" />
+                <span>VLSM</span>
+              </TabsTrigger>
+              <TabsTrigger value="visualizer" className="gap-2">
+                <Eye className="h-4 w-4" />
+                <span>Visualizer</span>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
 
-              <TabsContent value="calculator" className="space-y-6">
-                <SubnetCalculator />
-              </TabsContent>
-              <TabsContent value="flsm" className="space-y-6">
-                <FLSMCalculator />
-              </TabsContent>
-              <TabsContent value="vlsm" className="space-y-6">
-                <VLSMCalculator />
-              </TabsContent>
-              <TabsContent value="visualizer" className="space-y-6">
-                <SubnetVisualizer />
-              </TabsContent>
-            </Tabs>
-          </TabsContent>
+          <Tabs value={protocol} onValueChange={handleProtocolChange}>
+            <TabsList className="h-auto p-1">
+              <TabsTrigger value="ipv4" className="gap-2">
+                <span className="font-semibold">IPv4</span>
+              </TabsTrigger>
+              <TabsTrigger value="ipv6" className="gap-2">
+                <span className="font-semibold">IPv6</span>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
 
-          <TabsContent value="ipv6" className="space-y-6">
-            <Tabs defaultValue="calculator" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid h-auto p-1">
-                <TabsTrigger value="calculator" className="gap-2">
-                  <Calculator className="h-4 w-4" />
-                  <span>Calculator</span>
-                </TabsTrigger>
-                <TabsTrigger value="vlsm" className="gap-2">
-                  <Network className="h-4 w-4" />
-                  <span>VLSM</span>
-                </TabsTrigger>
-                <TabsTrigger value="visualizer" className="gap-2">
-                  <Eye className="h-4 w-4" />
-                  <span>Visualizer</span>
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="calculator" className="space-y-6">
-                <IPv6SubnetCalculator />
-              </TabsContent>
-              <TabsContent value="vlsm" className="space-y-6">
-                <IPv6VLSMCalculator />
-              </TabsContent>
-              <TabsContent value="visualizer" className="space-y-6">
-                <IPv6SubnetVisualizer />
-              </TabsContent>
-            </Tabs>
-          </TabsContent>
-        </Tabs>
+        <div className="calc-content">
+          {protocol === 'ipv4' && tool === 'calculator' && <SubnetCalculator />}
+          {protocol === 'ipv4' && tool === 'flsm' && <FLSMCalculator />}
+          {protocol === 'ipv4' && tool === 'vlsm' && <VLSMCalculator />}
+          {protocol === 'ipv4' && tool === 'visualizer' && <SubnetVisualizer />}
+          {protocol === 'ipv6' && tool === 'calculator' && <IPv6SubnetCalculator />}
+          {protocol === 'ipv6' && tool === 'vlsm' && <IPv6VLSMCalculator />}
+          {protocol === 'ipv6' && tool === 'visualizer' && <IPv6SubnetVisualizer />}
+        </div>
       </main>
 
       <Footer />

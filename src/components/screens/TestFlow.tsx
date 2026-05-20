@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useSession } from '../../hooks/useSession';
 import { useTheme } from '../../hooks/useTheme';
 import { useFocusMonitor } from '../../hooks/useFocusMonitor';
@@ -180,6 +180,9 @@ export function TestFlow({ categoria }: Props) {
     return (
       <div className="shell">
         <Header actions={themeToggle} />
+        <div className="shell-back-row">
+          <Link to="/" className="back-link">← Torna alla home</Link>
+        </div>
         <StudentInfoScreen
           durataMin={session.durataMin}
           categoria={categoria}
