@@ -59,13 +59,17 @@ export async function getStudentAuth(env: SharedEnv): Promise<StudentAuth> {
 
 export async function rotateStudentPassword(env: SharedEnv, newPassword: string, audit: { ip?: string; userAgent?: string }): Promise<void> {
   const now = new Date().toISOString();
-  const currentPwd = await getSetting(env, 'student_password');
-  // Se non c'era una password in DB, NON la mettiamo come "previous" (era l'env var, sempre valida).
-  if (currentPwd) {
+  // Password EFFETTIVA attuale = valore in DB, oppure fallback env var.
+  // La salviamo come "previous" così le sessioni in corso (che usano la
+  // password effettiva di prima, anche se era quella env) restano valide
+  // durante il grace period di 60 minuti.
+  const dbCurrent = await getSetting(env, 'student_password');
+  const effectiveCurrent = dbCurrent || env.APP_PASSWORD || env.VITE_APP_PASSWORD || '';
+  if (effectiveCurrent && effectiveCurrent !== newPassword) {
     await env.DB.prepare(
       `INSERT INTO settings (key, value, updated_at) VALUES ('student_password_previous', ?, ?)
        ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`
-    ).bind(currentPwd, now).run();
+    ).bind(effectiveCurrent, now).run();
   }
   await env.DB.prepare(
     `INSERT INTO settings (key, value, updated_at) VALUES ('student_password', ?, ?)

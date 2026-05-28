@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { cloudGetConfig, cloudLoginStudent } from '../../lib/cloudSync';
+import { cloudGetConfig, cloudLoginStudent, setStudentPassword } from '../../lib/cloudSync';
 
 interface Props {
   onSuccess: () => void;
@@ -34,12 +34,14 @@ export function LoginScreen({ onSuccess, onEsercitazione, onAdmin }: Props) {
     const res = await cloudLoginStudent(pwdStudent);
     setLoadingStudent(false);
     if (res.ok) {
+      setStudentPassword(pwdStudent);
       onSuccess();
       return;
     }
     if (res.status === 503) {
       // Server non configurato → fallback su confronto locale con la env var del bundle
       if (pwdStudent === PASSWORD_STUDENT_FALLBACK) {
+        setStudentPassword(pwdStudent);
         onSuccess();
         return;
       }

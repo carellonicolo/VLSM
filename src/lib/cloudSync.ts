@@ -41,9 +41,47 @@ export interface RecoverableSession {
 const STUDENT_PASSWORD = import.meta.env.VITE_APP_PASSWORD ?? 'vlsm2026';
 const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD ?? 'docente2026';
 
+// Password studente "effettiva": dopo il login validato dal server usiamo
+// quella digitata dallo studente (che riflette eventuali cambi password
+// runtime fatti dal docente), NON la costante compilata nel bundle.
+const STUDENT_AUTH_KEY = 'vlsm_student_auth';
+let runtimeStudentPassword: string | null = null;
+
+export function setStudentPassword(pwd: string): void {
+  runtimeStudentPassword = pwd;
+  try {
+    localStorage.setItem(STUDENT_AUTH_KEY, pwd);
+  } catch {
+    // ignore
+  }
+}
+
+export function clearStudentPassword(): void {
+  runtimeStudentPassword = null;
+  try {
+    localStorage.removeItem(STUDENT_AUTH_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+function studentAuthValue(): string {
+  if (runtimeStudentPassword) return runtimeStudentPassword;
+  try {
+    const stored = localStorage.getItem(STUDENT_AUTH_KEY);
+    if (stored) {
+      runtimeStudentPassword = stored;
+      return stored;
+    }
+  } catch {
+    // ignore
+  }
+  return STUDENT_PASSWORD;
+}
+
 async function api(path: string, init: RequestInit, role: 'student' | 'admin' = 'student'): Promise<Response> {
   const headers = new Headers(init.headers);
-  headers.set('x-vlsm-auth', role === 'admin' ? ADMIN_PASSWORD : STUDENT_PASSWORD);
+  headers.set('x-vlsm-auth', role === 'admin' ? ADMIN_PASSWORD : studentAuthValue());
   if (init.body && !headers.has('content-type')) {
     headers.set('content-type', 'application/json');
   }
