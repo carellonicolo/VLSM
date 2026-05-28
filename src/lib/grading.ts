@@ -59,7 +59,7 @@ export const ETICHETTE_RESIDUI: Record<string, string> = {
   broadcast: 'Broadcast',
 };
 
-interface RigaAttesa {
+export interface RigaAttesa {
   rowKey: string;
   attesi: Record<string, string>;
 }
@@ -177,7 +177,7 @@ function gradeRowParametriPiano(risposta: RispostaRiga | undefined, attesi: Riga
   };
 }
 
-function computeAllocAttesi(es: EsercizioVlsmAlloc): RigaAttesa[] {
+export function computeAllocAttesi(es: EsercizioVlsmAlloc): RigaAttesa[] {
   const parent = parseCidr(es.reteMadre);
   const allocs = allocateVlsm(parent, es.requisiti);
   return allocs.map((a) => ({
@@ -193,7 +193,7 @@ function computeAllocAttesi(es: EsercizioVlsmAlloc): RigaAttesa[] {
   }));
 }
 
-function computeParametriAttesi(es: EsercizioParametri): RigaAttesa[] {
+export function computeParametriAttesi(es: EsercizioParametri): RigaAttesa[] {
   return es.righe.map((r) => {
     let net: number;
     let prefix: number;
@@ -221,7 +221,7 @@ function computeParametriAttesi(es: EsercizioParametri): RigaAttesa[] {
   });
 }
 
-function computeResiduiAttesi(es: EsercizioAnalisiPiano): RigaAttesa[] {
+export function computeResiduiAttesi(es: EsercizioAnalisiPiano): RigaAttesa[] {
   const parent = parseCidr(es.bloccoPadre);
   const allocated = es.parteA.righe.map((r) => ({
     net: networkAddress(parseIp(r.indRete), r.prefisso),
@@ -238,6 +238,23 @@ function computeResiduiAttesi(es: EsercizioAnalisiPiano): RigaAttesa[] {
       broadcast: formatIp(broadcastAddress(b.net, b.prefix)),
     },
   }));
+}
+
+export function computeAnalisiParteAAttesi(es: EsercizioAnalisiPiano): RigaAttesa[] {
+  return es.parteA.righe.map((r) => {
+    const net = networkAddress(parseIp(r.indRete), r.prefisso);
+    return {
+      rowKey: r.rowKey,
+      attesi: {
+        indRete: formatIp(net),
+        prefisso: String(r.prefisso),
+        maschera: formatMask(r.prefisso),
+        primoHost: formatIp(firstHost(net, r.prefisso)),
+        ultimoHost: formatIp(lastHost(net, r.prefisso)),
+        broadcast: formatIp(broadcastAddress(net, r.prefisso)),
+      },
+    };
+  });
 }
 
 function gradeRowResiduo(risposta: RispostaRiga | undefined, attesi: RigaAttesa, puntiPerRiga: number): EsitoRiga {
@@ -317,20 +334,7 @@ function gradeParametri(es: EsercizioParametri, ra: RispostaEsercizio | undefine
 function gradeAnalisiPiano(es: EsercizioAnalisiPiano, ra: RispostaEsercizio | undefined): EsitoEsercizio {
   // Parte A: come parametri
   const parent = parseCidr(es.bloccoPadre);
-  const attesiA: RigaAttesa[] = es.parteA.righe.map((r) => {
-    const net = networkAddress(parseIp(r.indRete), r.prefisso);
-    return {
-      rowKey: r.rowKey,
-      attesi: {
-        indRete: formatIp(net),
-        prefisso: String(r.prefisso),
-        maschera: formatMask(r.prefisso),
-        primoHost: formatIp(firstHost(net, r.prefisso)),
-        ultimoHost: formatIp(lastHost(net, r.prefisso)),
-        broadcast: formatIp(broadcastAddress(net, r.prefisso)),
-      },
-    };
-  });
+  const attesiA = computeAnalisiParteAAttesi(es);
   const puntiPerRigaA = es.parteA.punti / attesiA.length;
   const ansA = ra?.parteA ?? [];
   const righeA = attesiA.map((att, i) => gradeRowParametriPiano(ansA[i], att, puntiPerRigaA));

@@ -3,8 +3,9 @@ import { parseMultiple, toCsv, downloadCsv, type ParsedFile } from '../../lib/pd
 import type { VerifyStatus } from '../../lib/pdfSign';
 import { SessionsLive } from './SessionsLive';
 import { SettingsTab } from './SettingsTab';
+import { VerificheTab } from './VerificheTab';
 
-type AdminTab = 'live' | 'bulk' | 'settings';
+type AdminTab = 'live' | 'bulk' | 'verifiche' | 'settings';
 
 interface Props {
   onExit: () => void;
@@ -143,6 +144,13 @@ export function AdminScreen({ onExit }: Props) {
           📥 Correzione PDF (bulk)
         </button>
         <button
+          className={tab === 'verifiche' ? 'btn' : 'btn btn-secondary'}
+          type="button"
+          onClick={() => setTab('verifiche')}
+        >
+          📄 Verifiche &amp; Soluzioni
+        </button>
+        <button
           className={tab === 'settings' ? 'btn' : 'btn btn-secondary'}
           type="button"
           onClick={() => setTab('settings')}
@@ -152,6 +160,7 @@ export function AdminScreen({ onExit }: Props) {
       </div>
 
       {tab === 'live' && <SessionsLive active={tab === 'live'} />}
+      {tab === 'verifiche' && <VerificheTab />}
       {tab === 'settings' && <SettingsTab active={tab === 'settings'} />}
 
       {tab === 'bulk' && (
