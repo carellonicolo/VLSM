@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { cloudGetConfig, cloudLoginStudent } from '../../lib/cloudSync';
+import { cloudGetConfig, cloudLoginStudent, setStudentPassword } from '../../lib/cloudSync';
 
 interface Props {
   onSuccess: () => void;
@@ -31,11 +31,17 @@ export function StudentLoginGate({ onSuccess }: Props) {
     const res = await cloudLoginStudent(pwd);
     setLoading(false);
     if (res.ok) {
+      // Memorizza la password EFFETTIVA digitata: è quella che il server si
+      // aspetta nell'header X-VLSM-Auth per i salvataggi della sessione.
+      // Senza questo, il client ripiega sulla VITE_APP_PASSWORD compilata nel
+      // bundle e il sync va in 401 (es. dopo un cambio password lato docente).
+      setStudentPassword(pwd);
       onSuccess();
       return;
     }
     if (res.status === 503) {
       if (pwd === PASSWORD_STUDENT_FALLBACK) {
+        setStudentPassword(pwd);
         onSuccess();
         return;
       }
