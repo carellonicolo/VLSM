@@ -10,6 +10,8 @@ import {
 import { formatDuration, formatTimeOfDay } from '../../lib/format';
 import { getVerifica } from '../../data/verifiche';
 import { gradeVerifica } from '../../lib/grading';
+import { useToast } from '../ui/Toast';
+import { useConfirm } from '../ui/Confirm';
 import type { EsitoFinale, MotivoConsegna, RispostaStudente } from '../../types/domain';
 
 const REFRESH_MS = 5000;
@@ -37,6 +39,8 @@ function activityState(row: CloudSessionRow): { color: string; label: string } {
 }
 
 export function SessionsLive({ active }: Props) {
+  const toast = useToast();
+  const confirm = useConfirm();
   const [rows, setRows] = useState<CloudSessionRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
@@ -72,21 +76,29 @@ export function SessionsLive({ active }: Props) {
   const filtered = useMemo(() => rows, [rows]);
 
   const onReopen = async (id: string) => {
-    if (!confirm("Riaprire questa verifica? Tornerà 'in_progress' con +15 minuti di tempo.")) return;
+    if (!(await confirm({ title: 'Riaprire la verifica?', message: "Tornerà 'in corso' con +15 minuti di tempo.", confirmLabel: 'Riapri' }))) return;
     setBusyId(id);
     const res = await cloudReopenSession(id, 15);
     setBusyId(null);
-    if (res.ok) void reload();
-    else alert(`Errore: ${res.error}`);
+    if (res.ok) {
+      toast('Verifica riaperta (+15 min).', 'success');
+      void reload();
+    } else {
+      toast(`Errore: ${res.error}`, 'error');
+    }
   };
 
   const onDelete = async (id: string) => {
-    if (!confirm('Eliminare questa sessione dal database cloud? Operazione irreversibile.')) return;
+    if (!(await confirm({ title: 'Eliminare la sessione?', message: 'Operazione irreversibile: la sessione verrà rimossa dal database cloud.', confirmLabel: 'Elimina', danger: true }))) return;
     setBusyId(id);
     const res = await cloudDeleteSession(id);
     setBusyId(null);
-    if (res.ok) void reload();
-    else alert(`Errore: ${res.error}`);
+    if (res.ok) {
+      toast('Sessione eliminata.', 'success');
+      void reload();
+    } else {
+      toast(`Errore: ${res.error}`, 'error');
+    }
   };
 
   const doIntervene = async (message: string) => {
@@ -96,8 +108,13 @@ export function SessionsLive({ active }: Props) {
     const res = await cloudIntervene(row.id, type, message);
     setBusyId(null);
     setIntervene(null);
-    if (res.ok) void reload();
-    else alert(`Errore: ${res.error}`);
+    if (res.ok) {
+      const label = type === 'annulla' ? 'Prova annullata.' : type === 'ammonizione' ? 'Ammonizione registrata.' : 'Alert inviato.';
+      toast(label, 'success');
+      void reload();
+    } else {
+      toast(`Errore: ${res.error}`, 'error');
+    }
   };
 
   const onDownloadPdf = async (id: string) => {
@@ -105,7 +122,7 @@ export function SessionsLive({ active }: Props) {
     try {
       const res = await cloudGetSession(id);
       if (!res.ok || !res.session) {
-        alert(`Errore: ${res.error ?? 'sessione non trovata'}`);
+        toast(`Errore: ${res.error ?? 'sessione non trovata'}`, 'error');
         return;
       }
       const s = res.session;
@@ -118,7 +135,7 @@ export function SessionsLive({ active }: Props) {
       } else {
         const verifica = getVerifica(s.verifica_id);
         if (!verifica) {
-          alert('Errore: verifica non trovata nel dataset locale.');
+          toast('Errore: verifica non trovata nel dataset locale.', 'error');
           return;
         }
         const startedAt = new Date(s.started_at);
@@ -150,7 +167,7 @@ export function SessionsLive({ active }: Props) {
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (e) {
-      alert(`Errore generazione PDF: ${e instanceof Error ? e.message : String(e)}`);
+      toast(`Errore generazione PDF: ${e instanceof Error ? e.message : String(e)}`, 'error');
     } finally {
       setBusyId(null);
     }

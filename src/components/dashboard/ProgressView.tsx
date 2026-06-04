@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import type { HistorySession } from '../../lib/studentApi';
 import { computeStats, type ProgressStats } from '../../lib/progress';
 import { buildCsv, downloadBlob, downloadCsv, safeFileName } from '../../lib/csv';
+import { useToast } from '../ui/Toast';
 
 interface Props {
   sessions: HistorySession[];
@@ -21,6 +22,7 @@ function statoTesto(st: string): string {
 export function ProgressView({ sessions, compact, subject }: Props) {
   const stats = useMemo(() => computeStats(sessions), [sessions]);
   const [pdfBusy, setPdfBusy] = useState(false);
+  const toast = useToast();
   const name = subject?.name ?? 'Andamento';
 
   const exportCsv = () => {
@@ -50,7 +52,7 @@ export function ProgressView({ sessions, compact, subject }: Props) {
       ).toBlob();
       downloadBlob(`andamento_${safeFileName(name)}.pdf`, blob);
     } catch (e) {
-      alert(`Errore generazione PDF: ${e instanceof Error ? e.message : String(e)}`);
+      toast(`Errore generazione PDF: ${e instanceof Error ? e.message : String(e)}`, 'error');
     } finally {
       setPdfBusy(false);
     }

@@ -285,6 +285,7 @@ export async function cloudDeleteStudent(id: string): Promise<{ ok: boolean; err
 export interface AdminClass {
   class: string;
   examEnabled: boolean;
+  examLevel: string | null;
   nValidati: number;
   nTotali: number;
   nInCorso: number;
@@ -304,8 +305,8 @@ export async function cloudListClasses(): Promise<{ ok: boolean; classes: AdminC
   }
 }
 
-export function cloudSetClassExam(klass: string, enabled: boolean): Promise<{ ok: boolean; error?: string }> {
-  return adminMutate('/api/admin/classes', { class: klass, enabled }, 'PUT');
+export function cloudSetClassExam(klass: string, enabled: boolean, level?: string | null): Promise<{ ok: boolean; error?: string }> {
+  return adminMutate('/api/admin/classes', { class: klass, enabled, level: level ?? undefined }, 'PUT');
 }
 
 export function cloudIntervene(

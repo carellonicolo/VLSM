@@ -242,6 +242,7 @@ export function TestFlow({ categoria }: Props) {
           studente={studente}
           durataMin={session.durataMin}
           categoria={categoria}
+          examLevel={categoria === 'verifica' ? exam?.level ?? null : null}
           onStart={(s, v, d) => startTest(s, v, d)}
           onResume={handleResume}
         />

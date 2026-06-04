@@ -10,6 +10,8 @@ import {
 } from '../../lib/cloudSync';
 import { ProgressView } from '../dashboard/ProgressView';
 import { buildCsv, downloadBlob, downloadCsv } from '../../lib/csv';
+import { useToast } from '../ui/Toast';
+import { useConfirm } from '../ui/Confirm';
 
 interface Props {
   active: boolean;
@@ -31,11 +33,14 @@ function statusBadge(status: string): { label: string; bg: string; color: string
 }
 
 export function StudentsTab({ active }: Props) {
+  const toast = useToast();
+  const confirm = useConfirm();
   const [students, setStudents] = useState<AdminStudent[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState('all');
   const [classFilter, setClassFilter] = useState('');
+  const [search, setSearch] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const [validateTarget, setValidateTarget] = useState<AdminStudent | null>(null);
@@ -62,21 +67,56 @@ export function StudentsTab({ active }: Props) {
 
   const pendingCount = useMemo(() => students.filter((s) => s.status === 'pending').length, [students]);
 
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return students;
+    return students.filter((s) => s.full_name.toLowerCase().includes(q) || s.email.toLowerCase().includes(q));
+  }, [students, search]);
+
   const doValidate = async (s: AdminStudent, status: string, klass?: string) => {
     setBusyId(s.id);
     const res = await cloudValidateStudent(s.id, status, klass);
     setBusyId(null);
     if (res.ok) {
       setValidateTarget(null);
+      toast(status === 'validated' ? `${s.full_name} convalidato.` : `Stato di ${s.full_name} aggiornato.`, 'success');
       void reload();
     } else {
-      alert(`Errore: ${res.error}`);
+      toast(`Errore: ${res.error}`, 'error');
     }
+  };
+
+  // Convalida rapida: approva tutti i pending che hanno già dichiarato una
+  // classe, confermando quella classe. Quelli senza classe dichiarata restano
+  // da gestire a mano.
+  const bulkValidatePending = async () => {
+    const pend = filtered.filter((s) => s.status === 'pending');
+    const conClasse = pend.filter((s) => (s.declared_class ?? '').trim().length > 0);
+    const senzaClasse = pend.length - conClasse.length;
+    if (conClasse.length === 0) {
+      toast('Nessun pending con classe dichiarata da convalidare.', 'info');
+      return;
+    }
+    const ok = await confirm({
+      title: 'Convalida rapida',
+      message: `Convalido ${conClasse.length} student${conClasse.length === 1 ? 'e' : 'i'} usando la classe che hanno dichiarato${senzaClasse > 0 ? ` (${senzaClasse} senza classe verranno saltati)` : ''}?`,
+      confirmLabel: 'Convalida tutti',
+    });
+    if (!ok) return;
+    setBusyId('bulk');
+    let done = 0;
+    for (const s of conClasse) {
+      const res = await cloudValidateStudent(s.id, 'validated', (s.declared_class ?? '').trim());
+      if (res.ok) done++;
+    }
+    setBusyId(null);
+    toast(`Convalidati ${done}/${conClasse.length}${senzaClasse > 0 ? ` · ${senzaClasse} saltati (senza classe)` : ''}.`, done === conClasse.length ? 'success' : 'info');
+    void reload();
   };
 
   const exportCsv = () => {
     const headers = ['Nome', 'Email', 'Classe dichiarata', 'Classe confermata', 'Stato', 'Verifiche', 'Esercitazioni', 'In corso', 'Ultimo accesso'];
-    const rows = students.map((s) => [
+    const rows = filtered.map((s) => [
       s.full_name,
       s.email,
       s.declared_class ?? '',
@@ -97,22 +137,32 @@ export function StudentsTab({ active }: Props) {
         import('@react-pdf/renderer'),
         import('../pdf/StudentsListPdf'),
       ]);
-      const blob = await pdf(<StudentsListPdf students={students} />).toBlob();
+      const blob = await pdf(<StudentsListPdf students={filtered} />).toBlob();
       downloadBlob(`studenti_${new Date().toISOString().slice(0, 10)}.pdf`, blob);
     } catch (e) {
-      alert(`Errore generazione PDF: ${e instanceof Error ? e.message : String(e)}`);
+      toast(`Errore generazione PDF: ${e instanceof Error ? e.message : String(e)}`, 'error');
     } finally {
       setPdfBusy(false);
     }
   };
 
   const onDelete = async (s: AdminStudent) => {
-    if (!confirm(`Eliminare l'account di ${s.full_name} (${s.email})?\nLe sue prove resteranno come 'legacy' non collegate. Operazione irreversibile.`)) return;
+    const ok = await confirm({
+      title: 'Eliminare account?',
+      message: `Eliminare l'account di ${s.full_name} (${s.email})? Le sue prove resteranno come 'legacy' non collegate. Operazione irreversibile.`,
+      confirmLabel: 'Elimina',
+      danger: true,
+    });
+    if (!ok) return;
     setBusyId(s.id);
     const res = await cloudDeleteStudent(s.id);
     setBusyId(null);
-    if (res.ok) void reload();
-    else alert(`Errore: ${res.error}`);
+    if (res.ok) {
+      toast('Account eliminato.', 'success');
+      void reload();
+    } else {
+      toast(`Errore: ${res.error}`, 'error');
+    }
   };
 
   const openDetail = async (s: AdminStudent) => {
@@ -121,7 +171,7 @@ export function StudentsTab({ active }: Props) {
     const res = await cloudGetStudent(s.id);
     setDetailLoading(false);
     if (res.ok && res.detail) setDetail(res.detail);
-    else alert(`Errore: ${res.error}`);
+    else toast(`Errore: ${res.error}`, 'error');
   };
 
   return (
@@ -153,31 +203,50 @@ export function StudentsTab({ active }: Props) {
               <option value="disabled">Disabilitati</option>
             </select>
             <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="🔎 Cerca nome o email"
+              style={{ width: 190 }}
+            />
+            <input
               type="text"
               value={classFilter}
               onChange={(e) => setClassFilter(e.target.value)}
               placeholder="Filtra per classe"
-              style={{ width: 150 }}
+              style={{ width: 140 }}
             />
             <button className="btn btn-secondary" type="button" onClick={() => void reload()} disabled={loading}>
               {loading ? '⏳' : '🔄'} Aggiorna
             </button>
-            <button className="btn btn-secondary" type="button" onClick={exportCsv} disabled={students.length === 0}>
+            <button className="btn btn-secondary" type="button" onClick={exportCsv} disabled={filtered.length === 0}>
               📥 CSV
             </button>
-            <button className="btn btn-secondary" type="button" onClick={() => void exportPdf()} disabled={students.length === 0 || pdfBusy}>
+            <button className="btn btn-secondary" type="button" onClick={() => void exportPdf()} disabled={filtered.length === 0 || pdfBusy}>
               {pdfBusy ? '⏳' : '📄'} PDF
             </button>
           </div>
         </div>
+        {pendingCount > 0 && (
+          <div style={{ marginTop: '0.6rem' }}>
+            <button className="btn" type="button" onClick={() => void bulkValidatePending()} disabled={busyId === 'bulk'}>
+              {busyId === 'bulk' ? 'Convalida in corso…' : `✓ Convalida rapida (${filtered.filter((s) => s.status === 'pending' && (s.declared_class ?? '').trim()).length})`}
+            </button>
+            <span className="muted" style={{ fontSize: '0.82rem', marginLeft: '0.6rem' }}>
+              Approva i pending usando la classe che hanno dichiarato.
+            </span>
+          </div>
+        )}
         {error && <div className="error-msg" style={{ marginTop: '0.75rem' }}>{error}</div>}
       </div>
 
-      {students.length === 0 && !error && (
-        <div className="card muted" style={{ textAlign: 'center' }}>Nessuno studente con questi filtri.</div>
+      {filtered.length === 0 && !error && (
+        <div className="card muted" style={{ textAlign: 'center' }}>
+          {students.length === 0 ? 'Nessuno studente con questi filtri.' : 'Nessuno studente corrisponde alla ricerca.'}
+        </div>
       )}
 
-      {students.length > 0 && (
+      {filtered.length > 0 && (
         <div className="card">
           <div style={{ overflowX: 'auto' }}>
             <table className="result-table">
@@ -194,7 +263,7 @@ export function StudentsTab({ active }: Props) {
                 </tr>
               </thead>
               <tbody>
-                {students.map((s) => {
+                {filtered.map((s) => {
                   const b = statusBadge(s.status);
                   return (
                     <tr key={s.id} style={s.status === 'pending' ? { background: 'var(--warn-bg)' } : undefined}>

@@ -20,6 +20,8 @@ export interface StudentProfile {
 export interface ExamState {
   enabledForClass: boolean;
   available: boolean;
+  /** Livello impostato dal docente: 'Base'|'Media'|'Alta'|'Esperta'|'random'|'student'|null. */
+  level: string | null;
 }
 
 const TOKEN_KEY = 'vlsm_auth_token';

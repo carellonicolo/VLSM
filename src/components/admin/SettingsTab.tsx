@@ -6,10 +6,12 @@ import {
   type AdminSettings,
   type AuditEntry,
 } from '../../lib/cloudSync';
+import { useToast } from '../ui/Toast';
 
 interface Props { active: boolean }
 
 export function SettingsTab({ active }: Props) {
+  const toast = useToast();
   const [settings, setSettings] = useState<AdminSettings | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,15 +40,19 @@ export function SettingsTab({ active }: Props) {
     setBusy(true);
     const res = await cloudSetVerificaEnabled(!settings.verificaEnabled);
     setBusy(false);
-    if (res.ok) void reload();
-    else alert(`Errore: ${res.error}`);
+    if (res.ok) {
+      toast(settings.verificaEnabled ? 'Modalità verifica disattivata.' : 'Modalità verifica attivata.', 'success');
+      void reload();
+    } else {
+      toast(`Errore: ${res.error}`, 'error');
+    }
   };
 
   const loadAudit = async () => {
     setShowAudit(true);
     const res = await cloudGetAuditLog();
     if (res.ok) setAuditEntries(res.entries);
-    else alert(`Errore: ${res.error}`);
+    else toast(`Errore: ${res.error}`, 'error');
   };
 
   if (loading && !settings) {
