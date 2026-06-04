@@ -12,11 +12,15 @@ export const onRequestGet: PagesFunction<SharedEnv> = async ({ request, env }) =
   const state = url.searchParams.get('state') ?? 'all';
   const limit = Math.min(500, Number(url.searchParams.get('limit') ?? '200'));
 
-  let query = `SELECT id, student_name, student_class, categoria, verifica_id, verifica_titolo,
-                      difficolta, state, started_at, deadline_at, consegnato_at, updated_at,
-                      duration_min, voto30, signature IS NOT NULL AS signed, motivo_consegna,
+  let query = `SELECT sessions.id AS id, student_name, student_class, student_id, categoria,
+                      verifica_id, verifica_titolo, difficolta, state, started_at, deadline_at,
+                      consegnato_at, updated_at, duration_min, voto30,
+                      signature IS NOT NULL AS signed, motivo_consegna, annullata_motivo,
                       client_id, client_user_agent, client_ip,
+                      (SELECT email FROM students st WHERE st.id = sessions.student_id) AS student_email,
                       json_array_length(eventi_focus_json) AS distrazioni_count,
+                      (SELECT COUNT(*) FROM session_events se
+                        WHERE se.session_id = sessions.id AND se.type = 'ammonizione') AS ammonizioni_count,
                       length(answers_json) AS answers_size
                  FROM sessions`;
   const binds: unknown[] = [];

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   cloudDeleteSession,
   cloudGetSession,
+  cloudIntervene,
   cloudListSessions,
   cloudReopenSession,
   type CloudSessionRow,
@@ -27,6 +28,7 @@ function relativeTime(iso: string | null): string {
 
 function activityState(row: CloudSessionRow): { color: string; label: string } {
   if (row.state === 'consegnata') return { color: 'var(--success)', label: '✅ Consegnata' };
+  if (row.state === 'annullata') return { color: 'var(--error)', label: '⛔ Annullata' };
   if (row.state === 'abbandonata') return { color: 'var(--muted)', label: '⚪ Abbandonata' };
   const diffMin = (Date.now() - new Date(row.updated_at).getTime()) / 60000;
   if (diffMin < 1) return { color: 'var(--success)', label: '🟢 Attiva' };
@@ -38,7 +40,7 @@ export function SessionsLive({ active }: Props) {
   const [rows, setRows] = useState<CloudSessionRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
-  const [stateFilter, setStateFilter] = useState<'all' | 'in_progress' | 'consegnata' | 'abbandonata'>('in_progress');
+  const [stateFilter, setStateFilter] = useState<'all' | 'in_progress' | 'consegnata' | 'abbandonata' | 'annullata'>('in_progress');
   const [busyId, setBusyId] = useState<string | null>(null);
   const [, force] = useState(0);
 
@@ -81,6 +83,28 @@ export function SessionsLive({ active }: Props) {
     if (!confirm('Eliminare questa sessione dal database cloud? Operazione irreversibile.')) return;
     setBusyId(id);
     const res = await cloudDeleteSession(id);
+    setBusyId(null);
+    if (res.ok) void reload();
+    else alert(`Errore: ${res.error}`);
+  };
+
+  const onIntervene = async (row: CloudSessionRow, type: 'alert' | 'ammonizione' | 'annulla') => {
+    let message: string;
+    if (type === 'alert') {
+      const m = prompt(`Messaggio da mostrare a ${row.student_name}:`, 'Attenzione: concentrati sulla tua prova.');
+      if (m == null) return;
+      message = m.trim() || 'Messaggio dal docente.';
+    } else if (type === 'ammonizione') {
+      const m = prompt(`Ammonizione per ${row.student_name}.\nIl motivo verrà mostrato allo studente e registrato sul resoconto:`, '');
+      if (m == null) return;
+      message = m.trim() || 'Ammonizione dal docente.';
+    } else {
+      const m = prompt(`⛔ ANNULLARE la prova di ${row.student_name}?\nLa prova verrà interrotta e bloccata. Scrivi il motivo (mostrato allo studente):`, '');
+      if (m == null) return;
+      message = m.trim() || 'Prova interrotta dal docente.';
+    }
+    setBusyId(row.id);
+    const res = await cloudIntervene(row.id, type, message);
     setBusyId(null);
     if (res.ok) void reload();
     else alert(`Errore: ${res.error}`);
@@ -160,6 +184,7 @@ export function SessionsLive({ active }: Props) {
             >
               <option value="in_progress">In corso</option>
               <option value="consegnata">Consegnate</option>
+              <option value="annullata">Annullate</option>
               <option value="abbandonata">Abbandonate</option>
               <option value="all">Tutte</option>
             </select>
@@ -199,6 +224,7 @@ export function SessionsLive({ active }: Props) {
                   <th>Iniziata</th>
                   <th>Ultimo save</th>
                   <th>Distrazioni</th>
+                  <th>Ammon.</th>
                   <th>Voto</th>
                   <th>Firma</th>
                   <th>Azioni</th>
@@ -209,8 +235,12 @@ export function SessionsLive({ active }: Props) {
                   const act = activityState(r);
                   return (
                     <tr key={r.id}>
-                      <td style={{ color: act.color, fontWeight: 600, whiteSpace: 'nowrap' }}>{act.label}</td>
-                      <td>{r.student_name}</td>
+                      <td style={{ color: act.color, fontWeight: 600, whiteSpace: 'nowrap' }} title={r.state === 'annullata' && r.annullata_motivo ? `Motivo: ${r.annullata_motivo}` : undefined}>{act.label}</td>
+                      <td>
+                        {r.student_name}
+                        {r.student_email && <div className="muted" style={{ fontSize: '0.72rem' }}>{r.student_email}</div>}
+                        {!r.student_id && <div className="muted" style={{ fontSize: '0.7rem', fontStyle: 'italic' }}>legacy</div>}
+                      </td>
                       <td>{r.student_class}</td>
                       <td>{r.verifica_titolo}{r.difficolta ? ` (${r.difficolta})` : ''}</td>
                       <td title={new Date(r.started_at).toLocaleString('it-IT')}>{formatTimeOfDay(r.started_at)}</td>
@@ -220,9 +250,48 @@ export function SessionsLive({ active }: Props) {
                           ? <span style={{ color: 'var(--error)', fontWeight: 600 }}>⚠ {r.distrazioni_count}</span>
                           : <span style={{ color: 'var(--success)' }}>✓ 0</span>}
                       </td>
+                      <td>
+                        {r.ammonizioni_count > 0
+                          ? <span style={{ color: 'var(--error)', fontWeight: 700 }}>⚠ {r.ammonizioni_count}</span>
+                          : '—'}
+                      </td>
                       <td><strong>{r.voto30 != null ? `${r.voto30}/30` : '—'}</strong></td>
                       <td>{r.signed ? '✅' : '—'}</td>
                       <td style={{ whiteSpace: 'nowrap' }}>
+                        {r.state === 'in_progress' && r.categoria === 'verifica' && (
+                          <>
+                            <button
+                              className="btn-secondary btn"
+                              type="button"
+                              style={{ fontSize: '0.75rem', padding: '0.25rem 0.45rem', marginRight: '0.25rem' }}
+                              disabled={busyId === r.id}
+                              onClick={() => void onIntervene(r, 'alert')}
+                              title="Invia un messaggio momentaneo allo studente"
+                            >
+                              ✉️ Alert
+                            </button>
+                            <button
+                              className="btn-secondary btn"
+                              type="button"
+                              style={{ fontSize: '0.75rem', padding: '0.25rem 0.45rem', marginRight: '0.25rem' }}
+                              disabled={busyId === r.id}
+                              onClick={() => void onIntervene(r, 'ammonizione')}
+                              title="Registra un'ammonizione (compare sul resoconto)"
+                            >
+                              ⚠️ Ammonisci
+                            </button>
+                            <button
+                              className="btn"
+                              type="button"
+                              style={{ fontSize: '0.75rem', padding: '0.25rem 0.45rem', marginRight: '0.25rem', background: 'var(--error)', borderColor: 'var(--error)' }}
+                              disabled={busyId === r.id}
+                              onClick={() => void onIntervene(r, 'annulla')}
+                              title="Interrompi e annulla la prova"
+                            >
+                              ⛔ Annulla
+                            </button>
+                          </>
+                        )}
                         <button
                           className="btn"
                           type="button"
@@ -233,7 +302,7 @@ export function SessionsLive({ active }: Props) {
                         >
                           📄 PDF
                         </button>
-                        {r.state === 'consegnata' && (
+                        {(r.state === 'consegnata' || r.state === 'annullata') && (
                           <button
                             className="btn-secondary btn"
                             type="button"

@@ -1,10 +1,11 @@
-import { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { lazy, Suspense, type ReactNode } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { HomePage } from './components/screens/HomePage';
+import { LoginAccountScreen } from './components/screens/LoginAccountScreen';
+import { RegisterScreen } from './components/screens/RegisterScreen';
+import { AuthProvider, useAuth } from './hooks/useAuth';
 
-// Le route non-home sono caricate on-demand: ognuna porta dietro un pezzo
-// pesante (calcolatori shadcn, dati verifiche, AdminScreen + cloud sync).
-// La landing resta eager perché è la prima cosa che l'utente vede.
+// Le route pesanti sono caricate on-demand.
 const CalcolatoriPage = lazy(() =>
   import('./components/screens/CalcolatoriPage').then((m) => ({ default: m.CalcolatoriPage }))
 );
@@ -13,6 +14,9 @@ const TestFlow = lazy(() =>
 );
 const AdminPage = lazy(() =>
   import('./components/screens/AdminPage').then((m) => ({ default: m.AdminPage }))
+);
+const StudentDashboard = lazy(() =>
+  import('./components/screens/StudentDashboard').then((m) => ({ default: m.StudentDashboard }))
 );
 
 function RouteFallback() {
@@ -23,19 +27,35 @@ function RouteFallback() {
   );
 }
 
+/** Protegge le route che richiedono un account studente loggato. */
+function RequireAuth({ children }: { children: ReactNode }) {
+  const { loading, student } = useAuth();
+  const location = useLocation();
+  if (loading) return <RouteFallback />;
+  if (!student) {
+    return <Navigate to={`/login?next=${encodeURIComponent(location.pathname)}`} replace />;
+  }
+  return <>{children}</>;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
-      <Suspense fallback={<RouteFallback />}>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/calcolatori" element={<CalcolatoriPage />} />
-          <Route path="/verifica" element={<TestFlow categoria="verifica" />} />
-          <Route path="/esercitazione" element={<TestFlow categoria="esercitazione" />} />
-          <Route path="/admin" element={<AdminPage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Suspense>
+      <AuthProvider>
+        <Suspense fallback={<RouteFallback />}>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/login" element={<LoginAccountScreen />} />
+            <Route path="/registrazione" element={<RegisterScreen />} />
+            <Route path="/dashboard" element={<RequireAuth><StudentDashboard /></RequireAuth>} />
+            <Route path="/calcolatori" element={<CalcolatoriPage />} />
+            <Route path="/verifica" element={<RequireAuth><TestFlow categoria="verifica" /></RequireAuth>} />
+            <Route path="/esercitazione" element={<RequireAuth><TestFlow categoria="esercitazione" /></RequireAuth>} />
+            <Route path="/admin" element={<AdminPage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
+      </AuthProvider>
     </BrowserRouter>
   );
 }

@@ -121,6 +121,11 @@ export interface EventoFocus {
   durataMs: number;
 }
 
+export interface Ammonizione {
+  at: string;
+  message: string;
+}
+
 export interface DatiStudente {
   nome: string;
   classe: string;
@@ -142,4 +147,5 @@ export interface EsitoFinale {
   signature?: string;
   signedAt?: string;
   eventiFocus: EventoFocus[];
+  ammonizioni?: Ammonizione[];
 }
