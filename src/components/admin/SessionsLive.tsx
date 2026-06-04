@@ -42,6 +42,7 @@ export function SessionsLive({ active }: Props) {
   const [lastError, setLastError] = useState<string | null>(null);
   const [stateFilter, setStateFilter] = useState<'all' | 'in_progress' | 'consegnata' | 'abbandonata' | 'annullata'>('in_progress');
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [intervene, setIntervene] = useState<{ row: CloudSessionRow; type: 'alert' | 'ammonizione' | 'annulla' } | null>(null);
   const [, force] = useState(0);
 
   const reload = useCallback(async () => {
@@ -88,24 +89,13 @@ export function SessionsLive({ active }: Props) {
     else alert(`Errore: ${res.error}`);
   };
 
-  const onIntervene = async (row: CloudSessionRow, type: 'alert' | 'ammonizione' | 'annulla') => {
-    let message: string;
-    if (type === 'alert') {
-      const m = prompt(`Messaggio da mostrare a ${row.student_name}:`, 'Attenzione: concentrati sulla tua prova.');
-      if (m == null) return;
-      message = m.trim() || 'Messaggio dal docente.';
-    } else if (type === 'ammonizione') {
-      const m = prompt(`Ammonizione per ${row.student_name}.\nIl motivo verrà mostrato allo studente e registrato sul resoconto:`, '');
-      if (m == null) return;
-      message = m.trim() || 'Ammonizione dal docente.';
-    } else {
-      const m = prompt(`⛔ ANNULLARE la prova di ${row.student_name}?\nLa prova verrà interrotta e bloccata. Scrivi il motivo (mostrato allo studente):`, '');
-      if (m == null) return;
-      message = m.trim() || 'Prova interrotta dal docente.';
-    }
+  const doIntervene = async (message: string) => {
+    if (!intervene) return;
+    const { row, type } = intervene;
     setBusyId(row.id);
     const res = await cloudIntervene(row.id, type, message);
     setBusyId(null);
+    setIntervene(null);
     if (res.ok) void reload();
     else alert(`Errore: ${res.error}`);
   };
@@ -265,7 +255,7 @@ export function SessionsLive({ active }: Props) {
                               type="button"
                               style={{ fontSize: '0.75rem', padding: '0.25rem 0.45rem', marginRight: '0.25rem' }}
                               disabled={busyId === r.id}
-                              onClick={() => void onIntervene(r, 'alert')}
+                              onClick={() => setIntervene({ row: r, type: 'alert' })}
                               title="Invia un messaggio momentaneo allo studente"
                             >
                               ✉️ Alert
@@ -275,7 +265,7 @@ export function SessionsLive({ active }: Props) {
                               type="button"
                               style={{ fontSize: '0.75rem', padding: '0.25rem 0.45rem', marginRight: '0.25rem' }}
                               disabled={busyId === r.id}
-                              onClick={() => void onIntervene(r, 'ammonizione')}
+                              onClick={() => setIntervene({ row: r, type: 'ammonizione' })}
                               title="Registra un'ammonizione (compare sul resoconto)"
                             >
                               ⚠️ Ammonisci
@@ -285,7 +275,7 @@ export function SessionsLive({ active }: Props) {
                               type="button"
                               style={{ fontSize: '0.75rem', padding: '0.25rem 0.45rem', marginRight: '0.25rem', background: 'var(--error)', borderColor: 'var(--error)' }}
                               disabled={busyId === r.id}
-                              onClick={() => void onIntervene(r, 'annulla')}
+                              onClick={() => setIntervene({ row: r, type: 'annulla' })}
                               title="Interrompi e annulla la prova"
                             >
                               ⛔ Annulla
@@ -331,6 +321,103 @@ export function SessionsLive({ active }: Props) {
           </div>
         </div>
       )}
+
+      {intervene && (
+        <InterveneModal
+          studentName={intervene.row.student_name}
+          type={intervene.type}
+          busy={busyId === intervene.row.id}
+          onClose={() => setIntervene(null)}
+          onConfirm={(msg) => void doIntervene(msg)}
+        />
+      )}
     </>
+  );
+}
+
+const PRESETS: Record<'alert' | 'ammonizione' | 'annulla', string[]> = {
+  alert: [
+    'Concentrati sulla tua prova.',
+    'Smetti di usare altri dispositivi.',
+    'Torna sulla scheda della verifica.',
+    'Resta in silenzio.',
+  ],
+  ammonizione: [
+    'Uso del telefono / dispositivi non consentiti',
+    'Consultazione di materiale non autorizzato',
+    'Comunicazione con altri studenti',
+    'Comportamento scorretto durante la prova',
+  ],
+  annulla: [
+    'Uso di dispositivi vietati',
+    'Copiatura accertata',
+    'Comportamento gravemente scorretto',
+  ],
+};
+
+const INTERVENE_META = {
+  alert: { title: '✉️ Invia un alert', cta: 'Invia alert', danger: false, help: 'Messaggio momentaneo: compare allo studente e poi scompare. Non lascia traccia.' },
+  ammonizione: { title: '⚠️ Ammonisci lo studente', cta: 'Registra ammonizione', danger: false, help: "L'ammonizione resta registrata e compare sul PDF/resoconto della verifica." },
+  annulla: { title: '⛔ Annulla la prova', cta: 'Annulla la prova', danger: true, help: 'La prova viene interrotta e bloccata: lo studente non potrà più rispondere. Il motivo gli verrà mostrato.' },
+} as const;
+
+function InterveneModal({
+  studentName,
+  type,
+  busy,
+  onClose,
+  onConfirm,
+}: {
+  studentName: string;
+  type: 'alert' | 'ammonizione' | 'annulla';
+  busy: boolean;
+  onClose: () => void;
+  onConfirm: (message: string) => void;
+}) {
+  const meta = INTERVENE_META[type];
+  const [msg, setMsg] = useState('');
+
+  return (
+    <div className="alert-overlay" role="dialog" aria-modal="true">
+      <div className="card" style={{ maxWidth: 520, width: '100%', borderTop: `5px solid ${meta.danger ? 'var(--error)' : 'var(--primary)'}` }}>
+        <h3 style={{ marginTop: 0 }}>{meta.title}</h3>
+        <p className="muted" style={{ marginTop: 0 }}>
+          Studente: <strong>{studentName}</strong>
+        </p>
+        <p className="muted" style={{ fontSize: '0.85rem', marginTop: 0 }}>{meta.help}</p>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.6rem' }}>
+          {PRESETS[type].map((p) => (
+            <button key={p} type="button" className="preset-chip" onClick={() => setMsg(p)}>{p}</button>
+          ))}
+        </div>
+
+        <div className="field">
+          <label htmlFor="intervene-msg">{type === 'alert' ? 'Messaggio' : 'Motivo'}</label>
+          <textarea
+            id="intervene-msg"
+            value={msg}
+            onChange={(e) => setMsg(e.target.value)}
+            rows={3}
+            autoFocus
+            placeholder={type === 'alert' ? 'Scrivi il messaggio…' : 'Scrivi il motivo…'}
+            style={{ width: '100%', padding: '0.5rem 0.7rem', border: '1px solid var(--border)', borderRadius: 5, fontFamily: 'inherit', fontSize: '0.95rem', background: 'var(--input-bg)', color: 'var(--fg)', resize: 'vertical' }}
+          />
+        </div>
+
+        <div className="actions" style={{ flexWrap: 'wrap' }}>
+          <button
+            className="btn"
+            type="button"
+            disabled={busy || (type !== 'annulla' && msg.trim().length === 0)}
+            style={meta.danger ? { background: 'var(--error)', borderColor: 'var(--error)' } : undefined}
+            onClick={() => onConfirm(msg.trim())}
+          >
+            {busy ? 'Invio…' : meta.cta}
+          </button>
+          <button className="btn btn-secondary" type="button" onClick={onClose} style={{ marginLeft: 'auto' }}>Annulla</button>
+        </div>
+      </div>
+    </div>
   );
 }

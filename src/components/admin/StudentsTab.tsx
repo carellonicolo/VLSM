@@ -126,6 +126,16 @@ export function StudentsTab({ active }: Props) {
 
   return (
     <>
+      <div className="card" style={{ borderLeft: '4px solid var(--primary)' }}>
+        <strong>Come gestire gli studenti</strong>
+        <div className="muted" style={{ fontSize: '0.85rem', marginTop: '0.25rem' }}>
+          1) Lo studente si registra da solo · 2) tu lo <strong>convalidi</strong> con «✓ Stato»
+          confermando la classe · 3) sblocchi l'esame per quella classe nella tab
+          <strong> «🎛 Classi &amp; esame»</strong> · 4) segui le prove in <strong>«🟢 Sessioni live»</strong>.
+          Solo gli studenti convalidati di una classe attiva possono fare verifiche.
+        </div>
+      </div>
+
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
           <div>
