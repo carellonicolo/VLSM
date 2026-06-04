@@ -13,8 +13,10 @@ export const onRequestGet: PagesFunction<AuthEnv> = async ({ request, env }) => 
   if (auth instanceof Response) return auth;
 
   try {
-    const master = await getVerificaEnabled(env);
-    const classEnabled = await isClassExamEnabled(env, auth.class);
+    const [master, classEnabled] = await Promise.all([
+      getVerificaEnabled(env),
+      isClassExamEnabled(env, auth.class),
+    ]);
     const enabledForClass = !!master && classEnabled;
     return jsonOk({
       student: publicStudent(auth),

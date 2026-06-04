@@ -189,7 +189,12 @@ export function StudentDashboard() {
       <h2 style={{ marginBottom: '0.5rem' }}>Il tuo andamento</h2>
       {histLoading && <div className="card muted">⏳ Caricamento storico…</div>}
       {histError && <div className="card error-msg">{histError}</div>}
-      {!histLoading && !histError && <ProgressView sessions={sessions} />}
+      {!histLoading && !histError && (
+        <ProgressView
+          sessions={sessions}
+          subject={{ name: student.fullName, subtitle: `${student.email}${student.class ? ` · ${student.class}` : ''}` }}
+        />
+      )}
 
       {!student.mustChangePassword && <ChangePasswordCard forced={false} />}
     </AppShell>

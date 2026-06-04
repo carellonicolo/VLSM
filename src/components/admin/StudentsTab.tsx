@@ -9,6 +9,7 @@ import {
   type AdminStudentDetail,
 } from '../../lib/cloudSync';
 import { ProgressView } from '../dashboard/ProgressView';
+import { buildCsv, downloadBlob, downloadCsv } from '../../lib/csv';
 
 interface Props {
   active: boolean;
@@ -38,8 +39,10 @@ export function StudentsTab({ active }: Props) {
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const [validateTarget, setValidateTarget] = useState<AdminStudent | null>(null);
+  const [resetTarget, setResetTarget] = useState<AdminStudent | null>(null);
   const [detail, setDetail] = useState<AdminStudentDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -71,17 +74,36 @@ export function StudentsTab({ active }: Props) {
     }
   };
 
-  const onResetPassword = async (s: AdminStudent) => {
-    const pwd = prompt(`Nuova password per ${s.full_name} (${s.email}) — minimo 8 caratteri.\nComunicala allo studente: gli verrà chiesto di cambiarla al prossimo accesso.`);
-    if (pwd == null) return;
-    if (pwd.length < 8) {
-      alert('La password deve avere almeno 8 caratteri.');
-      return;
+  const exportCsv = () => {
+    const headers = ['Nome', 'Email', 'Classe dichiarata', 'Classe confermata', 'Stato', 'Verifiche', 'Esercitazioni', 'In corso', 'Ultimo accesso'];
+    const rows = students.map((s) => [
+      s.full_name,
+      s.email,
+      s.declared_class ?? '',
+      s.class ?? '',
+      s.status,
+      s.n_verifiche,
+      s.n_esercitazioni,
+      s.n_in_corso,
+      s.last_login_at ? new Date(s.last_login_at).toLocaleString('it-IT') : '',
+    ]);
+    downloadCsv(`studenti_${new Date().toISOString().slice(0, 10)}.csv`, buildCsv(headers, rows));
+  };
+
+  const exportPdf = async () => {
+    setPdfBusy(true);
+    try {
+      const [{ pdf }, { StudentsListPdf }] = await Promise.all([
+        import('@react-pdf/renderer'),
+        import('../pdf/StudentsListPdf'),
+      ]);
+      const blob = await pdf(<StudentsListPdf students={students} />).toBlob();
+      downloadBlob(`studenti_${new Date().toISOString().slice(0, 10)}.pdf`, blob);
+    } catch (e) {
+      alert(`Errore generazione PDF: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setPdfBusy(false);
     }
-    setBusyId(s.id);
-    const res = await cloudResetStudentPassword(s.id, pwd);
-    setBusyId(null);
-    alert(res.ok ? 'Password reimpostata.' : `Errore: ${res.error}`);
   };
 
   const onDelete = async (s: AdminStudent) => {
@@ -130,6 +152,12 @@ export function StudentsTab({ active }: Props) {
             <button className="btn btn-secondary" type="button" onClick={() => void reload()} disabled={loading}>
               {loading ? '⏳' : '🔄'} Aggiorna
             </button>
+            <button className="btn btn-secondary" type="button" onClick={exportCsv} disabled={students.length === 0}>
+              📥 CSV
+            </button>
+            <button className="btn btn-secondary" type="button" onClick={() => void exportPdf()} disabled={students.length === 0 || pdfBusy}>
+              {pdfBusy ? '⏳' : '📄'} PDF
+            </button>
           </div>
         </div>
         {error && <div className="error-msg" style={{ marginTop: '0.75rem' }}>{error}</div>}
@@ -172,7 +200,7 @@ export function StudentsTab({ active }: Props) {
                       <td style={{ whiteSpace: 'nowrap' }}>
                         <button className="btn" type="button" style={btnSm} disabled={busyId === s.id} onClick={() => setValidateTarget(s)} title="Convalida / cambia stato e classe">✓ Stato</button>
                         <button className="btn btn-secondary" type="button" style={btnSm} disabled={busyId === s.id} onClick={() => void openDetail(s)} title="Vedi andamento e prove">📊</button>
-                        <button className="btn btn-secondary" type="button" style={btnSm} disabled={busyId === s.id} onClick={() => void onResetPassword(s)} title="Reimposta password">🔑</button>
+                        <button className="btn btn-secondary" type="button" style={btnSm} disabled={busyId === s.id} onClick={() => setResetTarget(s)} title="Reimposta password">🔑</button>
                         <button className="btn btn-secondary" type="button" style={btnSm} disabled={busyId === s.id} onClick={() => void onDelete(s)} title="Elimina account">🗑</button>
                       </td>
                     </tr>
@@ -191,6 +219,10 @@ export function StudentsTab({ active }: Props) {
           onClose={() => setValidateTarget(null)}
           onApply={(status, klass) => void doValidate(validateTarget, status, klass)}
         />
+      )}
+
+      {resetTarget && (
+        <ResetPasswordModal student={resetTarget} onClose={() => setResetTarget(null)} />
       )}
 
       {(detail || detailLoading) && (
@@ -240,6 +272,70 @@ function ValidateModal({
   );
 }
 
+function generatePassword(): string {
+  // Password leggibile: niente caratteri ambigui (0/O, 1/l/I).
+  const chars = 'abcdefghijkmnpqrstuvwxyzACDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const arr = crypto.getRandomValues(new Uint8Array(10));
+  return Array.from(arr, (b) => chars[b % chars.length]).join('');
+}
+
+function ResetPasswordModal({ student, onClose }: { student: AdminStudent; onClose: () => void }) {
+  const [pwd, setPwd] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErr(null);
+    if (pwd.length < 8) {
+      setErr('La password deve avere almeno 8 caratteri.');
+      return;
+    }
+    setBusy(true);
+    const res = await cloudResetStudentPassword(student.id, pwd);
+    setBusy(false);
+    if (res.ok) setDone(true);
+    else setErr(res.error ?? 'Errore.');
+  };
+
+  return (
+    <div className="alert-overlay" role="dialog" aria-modal="true">
+      <form className="card" style={{ maxWidth: 460, width: '100%' }} onSubmit={submit}>
+        <h3 style={{ marginTop: 0 }}>🔑 Reimposta password</h3>
+        <p className="muted" style={{ marginTop: 0 }}>
+          <strong>{student.full_name}</strong> · {student.email}
+        </p>
+        {done ? (
+          <>
+            <div style={{ background: 'var(--success-bg)', color: 'var(--success)', padding: '0.6rem 0.8rem', borderRadius: 6, marginBottom: '0.75rem' }}>
+              ✅ Password impostata. Comunicala allo studente: <strong style={{ fontFamily: 'monospace' }}>{pwd}</strong>
+              <div style={{ fontSize: '0.82rem', marginTop: '0.25rem' }}>Gli verrà chiesto di cambiarla al primo accesso.</div>
+            </div>
+            <div className="actions">
+              <button className="btn btn-secondary" type="button" onClick={() => void navigator.clipboard?.writeText(pwd)}>📋 Copia</button>
+              <button className="btn" type="button" onClick={onClose}>Chiudi</button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="field">
+              <label htmlFor="reset-pwd">Nuova password (min 8)</label>
+              <input id="reset-pwd" type="text" value={pwd} onChange={(e) => setPwd(e.target.value)} autoFocus autoComplete="off" />
+            </div>
+            {err && <div className="error-msg" style={{ marginBottom: '0.5rem' }}>{err}</div>}
+            <div className="actions" style={{ flexWrap: 'wrap' }}>
+              <button className="btn btn-secondary" type="button" onClick={() => setPwd(generatePassword())}>🎲 Genera</button>
+              <button className="btn" type="submit" disabled={busy}>{busy ? 'Salvataggio…' : 'Imposta password'}</button>
+              <button className="btn btn-secondary" type="button" onClick={onClose} style={{ marginLeft: 'auto' }}>Annulla</button>
+            </div>
+          </>
+        )}
+      </form>
+    </div>
+  );
+}
+
 function DetailModal({ detail, loading, onClose }: { detail: AdminStudentDetail | null; loading: boolean; onClose: () => void }) {
   return (
     <div className="alert-overlay" role="dialog" aria-modal="true" onClick={onClose}>
@@ -257,7 +353,13 @@ function DetailModal({ detail, loading, onClose }: { detail: AdminStudentDetail 
               <button className="btn btn-secondary" type="button" onClick={onClose}>Chiudi</button>
             </div>
             <div style={{ marginTop: '1rem' }}>
-              <ProgressView sessions={detail.sessions} />
+              <ProgressView
+                sessions={detail.sessions}
+                subject={{
+                  name: detail.student.full_name,
+                  subtitle: `${detail.student.email}${detail.student.class ? ` · ${detail.student.class}` : ''}`,
+                }}
+              />
             </div>
           </>
         )}

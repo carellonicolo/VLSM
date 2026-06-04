@@ -73,8 +73,10 @@ export const onRequestPost: PagesFunction<AuthEnv> = async ({ request, env }) =>
       if (auth.status !== 'validated') {
         return jsonError(403, 'Account non ancora convalidato dal docente.');
       }
-      const master = await getVerificaEnabled(env);
-      const classEnabled = await isClassExamEnabled(env, auth.class);
+      const [master, classEnabled] = await Promise.all([
+        getVerificaEnabled(env),
+        isClassExamEnabled(env, auth.class),
+      ]);
       if (!master || !classEnabled) {
         return jsonError(403, 'La modalità verifica non è attiva per la tua classe.');
       }
