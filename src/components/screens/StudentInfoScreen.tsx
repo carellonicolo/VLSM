@@ -3,10 +3,11 @@ import type { Categoria, DatiStudente, Difficolta, VerificaId } from '../../type
 import { DIFFICOLTA_ORDER } from '../../types/domain';
 import { pickVerifica } from '../../lib/pickVerifica';
 import { verificheByDifficolta } from '../../data/verifiche';
-import { cloudRecover, type RecoverableSession } from '../../lib/cloudSync';
+import { studentRecover, type RecoverableSession } from '../../lib/studentApi';
 import { RecoverModal } from './RecoverModal';
 
 interface Props {
+  studente: DatiStudente;
   durataMin: number;
   categoria: Categoria;
   onStart: (studente: DatiStudente, verificaId: VerificaId, durataMin: number) => void;
@@ -16,35 +17,32 @@ interface Props {
 const RAW_DURATA = Number(import.meta.env.VITE_DURATA_DEFAULT_MIN ?? '0');
 const DURATA_BLOCCATA_VERIFICA = Number.isFinite(RAW_DURATA) && RAW_DURATA > 0 ? RAW_DURATA : null;
 
-export function StudentInfoScreen({ durataMin, categoria, onStart, onResume }: Props) {
+export function StudentInfoScreen({ studente, durataMin, categoria, onStart, onResume }: Props) {
   const isEsercitazione = categoria === 'esercitazione';
   const durataBloccata = isEsercitazione ? null : DURATA_BLOCCATA_VERIFICA;
 
-  const [nome, setNome] = useState('');
-  const [classe, setClasse] = useState('');
   const [durata, setDurata] = useState(durataBloccata ?? durataMin);
   const [difficolta, setDifficolta] = useState<Difficolta>('Base');
   const [checkingRecover, setCheckingRecover] = useState(false);
   const [recoverable, setRecoverable] = useState<RecoverableSession | null>(null);
   const [recoverConsumed, setRecoverConsumed] = useState(false);
 
-  const valid = nome.trim().length >= 2 && classe.trim().length >= 1 && durata > 0;
+  const valid = durata > 0;
 
   const startNew = () => {
     const verificaId = pickVerifica(difficolta, categoria);
-    onStart({ nome: nome.trim(), classe: classe.trim() }, verificaId, durataBloccata ?? durata);
+    onStart(studente, verificaId, durataBloccata ?? durata);
   };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!valid) return;
-    // Le esercitazioni non hanno recupero cloud.
     if (isEsercitazione || recoverConsumed) {
       startNew();
       return;
     }
     setCheckingRecover(true);
-    const found = await cloudRecover(nome.trim(), classe.trim());
+    const found = await studentRecover();
     setCheckingRecover(false);
     if (found) {
       setRecoverable(found);
@@ -55,39 +53,34 @@ export function StudentInfoScreen({ durataMin, categoria, onStart, onResume }: P
 
   return (
     <form className="card" onSubmit={submit} style={{ maxWidth: 560, margin: '2rem auto' }}>
-      <h2 style={{ marginTop: 0 }}>
-        {isEsercitazione ? '🎯 Esercitazione libera' : 'Dati studente'}
-      </h2>
+      <h2 style={{ marginTop: 0 }}>{isEsercitazione ? '🎯 Esercitazione libera' : '📝 Inizia la verifica'}</h2>
+
+      <div className="identity-box">
+        <div><span className="muted">Studente:</span> <strong>{studente.nome}</strong></div>
+        <div><span className="muted">Classe:</span> <strong>{studente.classe || '—'}</strong></div>
+      </div>
+
       <p className="muted">
         {isEsercitazione
-          ? 'Inserisci i tuoi dati e scegli il livello. Verrà sorteggiata una simulazione tra quelle disponibili per quel livello. Le simulazioni non valgono come verifica ufficiale.'
-          : 'Inserisci nome, classe e durata. All\'avvio verrà sorteggiata casualmente una delle verifiche disponibili.'}
+          ? 'Scegli il livello: verrà sorteggiata una simulazione tra quelle disponibili. Le simulazioni non valgono come verifica ufficiale.'
+          : 'Scegli il livello e la durata. All\'avvio verrà sorteggiata casualmente una delle verifiche disponibili.'}
       </p>
 
       {!isEsercitazione && (
         <div className="warn-banner">
           <strong>⚠️ ATTENZIONE — La verifica è monitorata</strong>
           <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.9rem' }}>
-            Durante lo svolgimento il sistema registra ogni volta che esci dalla pagina (cambio scheda, minimizzazione,
-            apertura di altre applicazioni). Il numero di abbandoni e la durata totale lontano dalla pagina
-            saranno <strong>visibili sul PDF firmato</strong> e consegnati al docente.
+            Durante lo svolgimento il sistema registra ogni uscita dalla pagina (cambio scheda, minimizzazione,
+            apertura di altre app) e gli eventuali interventi del docente (alert, ammonizioni). Il docente può
+            inviarti messaggi o <strong>interrompere la prova</strong> in tempo reale. Distrazioni e ammonizioni
+            saranno <strong>visibili sul PDF</strong> consegnato al docente.
           </p>
           <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.85rem' }}>
-            Le risposte vengono inoltre <strong>salvate temporaneamente su server Cloudflare cifrato</strong>
-            {' '}per consentirne il recupero in caso di guasto del PC o crash del browser.
+            Le risposte vengono <strong>salvate sul server</strong> per consentirne il recupero in caso di guasto del PC.
           </p>
         </div>
       )}
-      <div className="field-row">
-        <div className="field">
-          <label htmlFor="nome">Nome e cognome</label>
-          <input id="nome" type="text" value={nome} onChange={(e) => setNome(e.target.value)} autoFocus />
-        </div>
-        <div className="field">
-          <label htmlFor="classe">Classe</label>
-          <input id="classe" type="text" value={classe} onChange={(e) => setClasse(e.target.value)} placeholder="es. 5A SRI" />
-        </div>
-      </div>
+
       <div className="field-row">
         <div className="field">
           <label htmlFor="difficolta">Livello di difficoltà</label>
@@ -95,7 +88,7 @@ export function StudentInfoScreen({ durataMin, categoria, onStart, onResume }: P
             id="difficolta"
             value={difficolta}
             onChange={(e) => setDifficolta(e.target.value as Difficolta)}
-            style={{ width: '100%', padding: '0.5rem 0.7rem', border: '1px solid var(--border)', borderRadius: 5, fontSize: '0.95rem', fontFamily: 'inherit', background: 'white' }}
+            style={{ width: '100%', padding: '0.5rem 0.7rem', border: '1px solid var(--border)', borderRadius: 5, fontSize: '0.95rem', fontFamily: 'inherit', background: 'var(--input-bg)' }}
           >
             {DIFFICOLTA_ORDER.map((d) => {
               const count = verificheByDifficolta(d, categoria).length;
@@ -125,6 +118,7 @@ export function StudentInfoScreen({ durataMin, categoria, onStart, onResume }: P
           />
         </div>
       </div>
+
       <button className="btn" type="submit" disabled={!valid || checkingRecover} style={{ width: '100%' }}>
         {checkingRecover
           ? '⏳ Verifico se hai una sessione interrotta…'
@@ -132,6 +126,7 @@ export function StudentInfoScreen({ durataMin, categoria, onStart, onResume }: P
             ? 'Sorteggia simulazione e inizia'
             : 'Sorteggia verifica e inizia'}
       </button>
+
       {recoverable && (
         <RecoverModal
           session={recoverable}

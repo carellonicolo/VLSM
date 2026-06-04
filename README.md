@@ -9,12 +9,15 @@ App web frontend-only per somministrare verifiche di **VLSM** (Variable Length S
 
 ## Funzionamento
 
-1. Lo studente entra con una password condivisa.
-2. Inserisce nome e classe; il sistema sorteggia una delle 6 verifiche.
-3. Svolge la verifica con timer configurabile (default 60 min).
-4. Allo scadere, o cliccando "Termina", l'app corregge automaticamente e mostra il voto.
-5. Lo studente scarica un PDF con risposte, errori evidenziati, voto e spazio firme.
-6. Stampa, firma, consegna cartaceo al docente.
+1. Lo studente si **registra** con la sua email scolastica (`@marconiverona.edu.it`) e una password.
+2. Il **docente convalida** l'account e ne conferma la **classe** (dal pannello "Studenti").
+3. Il docente **sblocca la verifica per quella classe** (tab "Classi & esame").
+4. Lo studente loggato e convalidato avvia la verifica: il sistema sorteggia una verifica del livello scelto.
+5. Svolge la verifica con timer; il docente può seguirla **in tempo reale** e, se serve, inviare un **alert**, un'**ammonizione** o **interrompere/annullare** la prova.
+6. Allo scadere (o "Termina") l'app corregge in automatico, mostra il voto e genera un **PDF firmato** con risposte, errori, distrazioni e ammonizioni.
+7. Tutte le prove (verifiche ed esercitazioni) confluiscono nello **storico/andamento** dello studente, visibile anche al docente.
+
+> Gli studenti **non ancora convalidati** (o le classi senza esame attivo) possono comunque usare le **esercitazioni libere**, che vengono registrate nel loro storico.
 
 ## Sviluppo
 
@@ -31,10 +34,21 @@ npm run preview    # preview del build di produzione
 Crea un file `.env.local` (o configura le env var su Cloudflare):
 
 ```
-VITE_APP_PASSWORD=vlsm2026          # password studente per svolgere le verifiche
-VITE_ADMIN_PASSWORD=docente2026     # password docente per la correzione bulk
+VITE_ADMIN_PASSWORD=docente2026     # password docente (pannello + API admin)
 VITE_DURATA_DEFAULT_MIN=60
+VITE_APP_PASSWORD=vlsm2026          # LEGACY: non più usata dagli studenti (account email)
 ```
+
+**Variabili server-side (Cloudflare Pages → Settings → Environment variables):**
+
+```
+ADMIN_PASSWORD=docente2026          # = VITE_ADMIN_PASSWORD, usata dalle Functions admin
+VLSM_AUTH_SECRET=<random ≥32 char>  # secret per firmare i token di sessione studente (Tipo: Secret)
+VLSM_HMAC_SECRET=<random ≥32 char>  # secret per la firma HMAC dei PDF (Tipo: Secret)
+STUDENT_EMAIL_DOMAIN=marconiverona.edu.it   # opzionale: dominio email ammesso in registrazione
+```
+
+> Se `VLSM_AUTH_SECRET` non è impostata, le Functions ripiegano su `VLSM_HMAC_SECRET` e, in mancanza di entrambe, su un secret di sviluppo **insicuro**: in produzione impostane almeno uno.
 
 **Comportamento del campo durata:**
 - `VITE_DURATA_DEFAULT_MIN=0` (o non impostata) → lo studente può scegliere liberamente la durata prima di iniziare (default mostrato: 60 min).
@@ -136,6 +150,10 @@ L'app sincronizza automaticamente le verifiche degli studenti su un database SQL
    - Poi `migrations/0002_settings.sql` e di nuovo **Execute** (aggiunge la
      tabella `settings` per il pannello admin: toggle modalità verifica e
      cambio password studente da UI).
+   - Infine `migrations/0003_accounts.sql` e **Execute** (account studenti,
+     convalida docente, sblocco verifica per-classe, interventi docente).
+     ⚠️ Va eseguito **una sola volta**: gli `ALTER TABLE` finali danno errore
+     se rilanciati (le colonne esistono già).
 
 3. **Collega il DB al progetto Pages**
    - Pages → progetto `vlsm` → **Settings** → **Functions** → sezione **D1 database bindings** → **Add binding**
@@ -174,6 +192,46 @@ In **Modalità docente** → tab **⚙️ Impostazioni** puoi:
 - Nessuna interruzione del flusso normale
 
 **Privacy:** ai sensi del Regolamento UE 2016/679 (GDPR), il titolare del trattamento è la scuola. I dati raccolti (nome, classe, risposte, eventi distrazione) sono conservati a tempo indeterminato a meno che non li cancelli manualmente da Cloudflare D1 (Console → query `DELETE FROM sessions WHERE ...`) o dalla tab admin "Sessioni live" tramite il bottone 🗑 Elimina.
+
+## Account studenti, convalida e controllo verifiche
+
+Dall'upgrade "account" l'accesso a esercitazioni e verifiche richiede un
+**account studente** (email scolastica + password). I calcolatori restano liberi.
+
+### Flusso account
+- **Registrazione** (`/registrazione`): self-service, solo email del dominio scolastico.
+  L'account nasce in stato `pending`. Nessuna email di verifica viene inviata.
+- **Login** (`/login`): email + password → token di sessione firmato (HMAC), salvato
+  in `localStorage` e inviato come `Authorization: Bearer` su tutte le API protette.
+- **Dashboard** (`/dashboard`): stato account, accesso a esercitazione/verifica,
+  e **andamento** (medie, media per livello, grafico trend, distrazioni, ammonizioni).
+
+### Convalida e classi (lato docente)
+- Tab **👥 Studenti**: elenco di tutti gli account (i `pending` in cima). Per ognuno:
+  **Convalida** (= approva + conferma la **classe**), metti in attesa, rifiuta, disabilita,
+  **reset password** (lo studente la cambia al primo accesso), **storico** (andamento e prove),
+  elimina.
+- Tab **🎛 Classi & esame**: sblocca la verifica **per singola classe**. Solo gli studenti
+  **convalidati** di una classe **attiva** possono iniziare una verifica. Esiste anche
+  l'interruttore generale "Modalità verifica" (tab Impostazioni) come master: se spento,
+  l'esame è bloccato per tutte le classi.
+
+### Controllo della verifica in tempo reale
+Nella tab **🟢 Sessioni live**, per ogni verifica in corso il docente può:
+- **✉️ Alert** — messaggio momentaneo che compare allo studente;
+- **⚠️ Ammonisci** — ammonizione **registrata**: compare allo studente, sul **PDF** e nel
+  resoconto (nessuna escalation automatica: l'annullamento resta manuale);
+- **⛔ Annulla** — interrompe la prova: lo studente vede a schermo intero "Prova interrotta
+  dal docente", non può più rispondere, la sessione passa a stato `annullata` con motivo.
+
+Lo studente riceve gli interventi via **polling** ogni ~3 s (nessun WebSocket: resta nel
+free tier Cloudflare). Una prova annullata non può più essere salvata né ripresa dallo studente.
+
+### Sicurezza
+- Password: hash **PBKDF2-HMAC-SHA256** (WebCrypto, salt per-utente, 150k iterazioni).
+- Sessione: token firmato HMAC con scadenza; ad ogni richiesta lo stato dello studente
+  viene riletto dal DB (un account disabilitato/rifiutato è bloccato all'istante).
+- Le API admin restano protette dalla password docente (`ADMIN_PASSWORD`).
 
 ## Struttura
 
@@ -226,13 +284,13 @@ Tutti i `.md` sono generati automaticamente da `scripts/generate-md.ts` (`npx ts
 
 ## Modalità d'uso
 
-L'app ha due modalità separate, accessibili dalla schermata iniziale.
+Tutto parte dall'**account studente** (login con email scolastica). I calcolatori restano liberi.
 
-### Verifica ufficiale (con password)
-Lo studente inserisce la `VITE_APP_PASSWORD`, sceglie il livello dal menù a tendina e il sistema sorteggia una delle 4 verifiche di quel livello. Il PDF finale ha gli spazi per la firma studente/docente.
+### Verifica ufficiale
+Disponibile solo a studenti **convalidati** la cui **classe** ha l'esame **attivo**. Lo studente sceglie il livello dal menù a tendina e il sistema sorteggia una delle verifiche di quel livello. Identità (nome/classe) presa dall'account. Il PDF finale ha gli spazi per la firma studente/docente e riporta distrazioni ed eventuali ammonizioni.
 
-### Esercitazione libera (senza password)
-Pulsante "🎯 Modalità esercitazione" sulla schermata di login: nessuna password richiesta. Lo studente sceglie il livello e il sistema sorteggia una delle 2 simulazioni del livello. Il PDF mostra un banner "ESERCITAZIONE LIBERA — non vale come verifica ufficiale" e non ha gli spazi firma.
+### Esercitazione libera
+Disponibile a **qualunque studente loggato** (anche non convalidato). Lo studente sceglie il livello e il sistema sorteggia una delle simulazioni del livello. Il PDF mostra un banner "ESERCITAZIONE LIBERA — non vale come verifica ufficiale" e non ha gli spazi firma. Le esercitazioni entrano comunque nello storico personale.
 
 ### Livelli di difficoltà
 

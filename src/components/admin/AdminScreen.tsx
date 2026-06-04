@@ -4,8 +4,10 @@ import type { VerifyStatus } from '../../lib/pdfSign';
 import { SessionsLive } from './SessionsLive';
 import { SettingsTab } from './SettingsTab';
 import { VerificheTab } from './VerificheTab';
+import { StudentsTab } from './StudentsTab';
+import { ClassesTab } from './ClassesTab';
 
-type AdminTab = 'live' | 'bulk' | 'verifiche' | 'settings';
+type AdminTab = 'studenti' | 'classi' | 'live' | 'bulk' | 'verifiche' | 'settings';
 
 interface Props {
   onExit: () => void;
@@ -49,7 +51,7 @@ function badgeLabel(status: VerifyStatus | undefined): string {
 }
 
 export function AdminScreen({ onExit }: Props) {
-  const [tab, setTab] = useState<AdminTab>('live');
+  const [tab, setTab] = useState<AdminTab>('studenti');
   const [parsing, setParsing] = useState(false);
   const [parsed, setParsed] = useState<ParsedFile[]>([]);
   const [generatingPdf, setGeneratingPdf] = useState(false);
@@ -130,6 +132,20 @@ export function AdminScreen({ onExit }: Props) {
 
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
         <button
+          className={tab === 'studenti' ? 'btn' : 'btn btn-secondary'}
+          type="button"
+          onClick={() => setTab('studenti')}
+        >
+          👥 Studenti
+        </button>
+        <button
+          className={tab === 'classi' ? 'btn' : 'btn btn-secondary'}
+          type="button"
+          onClick={() => setTab('classi')}
+        >
+          🎛 Classi &amp; esame
+        </button>
+        <button
           className={tab === 'live' ? 'btn' : 'btn btn-secondary'}
           type="button"
           onClick={() => setTab('live')}
@@ -159,6 +175,8 @@ export function AdminScreen({ onExit }: Props) {
         </button>
       </div>
 
+      {tab === 'studenti' && <StudentsTab active={tab === 'studenti'} />}
+      {tab === 'classi' && <ClassesTab active={tab === 'classi'} />}
       {tab === 'live' && <SessionsLive active={tab === 'live'} />}
       {tab === 'verifiche' && <VerificheTab />}
       {tab === 'settings' && <SettingsTab active={tab === 'settings'} />}

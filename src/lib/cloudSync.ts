@@ -128,15 +128,19 @@ export async function cloudRecover(nome: string, classe: string): Promise<Recove
   }
 }
 
+export type SessionState = 'in_progress' | 'consegnata' | 'abbandonata' | 'annullata';
+
 export interface CloudSessionRow {
   id: string;
   student_name: string;
   student_class: string;
+  student_id: string | null;
+  student_email: string | null;
   categoria: string;
   verifica_id: string;
   verifica_titolo: string;
   difficolta: string | null;
-  state: 'in_progress' | 'consegnata' | 'abbandonata';
+  state: SessionState;
   started_at: string;
   deadline_at: string;
   consegnato_at: string | null;
@@ -145,10 +149,12 @@ export interface CloudSessionRow {
   voto30: number | null;
   signed: 0 | 1;
   motivo_consegna: string | null;
+  annullata_motivo: string | null;
   client_id: string;
   client_user_agent: string | null;
   client_ip: string | null;
   distrazioni_count: number;
+  ammonizioni_count: number;
   answers_size: number;
 }
 
@@ -171,11 +177,13 @@ export interface CloudSessionDetail {
   id: string;
   student_name: string;
   student_class: string;
+  student_id: string | null;
+  student_email: string | null;
   categoria: 'verifica' | 'esercitazione';
   verifica_id: string;
   verifica_titolo: string;
   difficolta: string | null;
-  state: 'in_progress' | 'consegnata' | 'abbandonata';
+  state: SessionState;
   started_at: string;
   deadline_at: string;
   consegnato_at: string | null;
@@ -185,9 +193,11 @@ export interface CloudSessionDetail {
   signature: string | null;
   signed_at: string | null;
   motivo_consegna: string | null;
+  annullata_motivo: string | null;
   answers: unknown;
   eventiFocus: { startedAt: string; durataMs: number }[];
   esito: unknown;
+  events: { id: number; type: string; message: string | null; created_at: string }[];
 }
 
 export async function cloudGetSession(id: string): Promise<{ ok: boolean; session?: CloudSessionDetail; error?: string }> {
@@ -344,6 +354,131 @@ export async function cloudDeleteSession(id: string): Promise<{ ok: boolean; err
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
+}
+
+// ====== Gestione studenti & classi (docente) ======
+
+export interface AdminStudent {
+  id: string;
+  email: string;
+  full_name: string;
+  declared_class: string | null;
+  class: string | null;
+  status: 'pending' | 'validated' | 'rejected' | 'disabled' | string;
+  must_change_password: number;
+  created_at: string;
+  validated_at: string | null;
+  last_login_at: string | null;
+  n_verifiche: number;
+  n_esercitazioni: number;
+  n_in_corso: number;
+}
+
+export async function cloudListStudents(status = 'all', klass = ''): Promise<{ ok: boolean; students: AdminStudent[]; error?: string }> {
+  try {
+    const params = new URLSearchParams();
+    if (status && status !== 'all') params.set('status', status);
+    if (klass) params.set('class', klass);
+    const qs = params.toString();
+    const res = await api(`/api/admin/students${qs ? `?${qs}` : ''}`, { method: 'GET' }, 'admin');
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      return { ok: false, students: [], error: `HTTP ${res.status}: ${body.slice(0, 200)}` };
+    }
+    const data = (await res.json()) as { students: AdminStudent[] };
+    return { ok: true, students: data.students ?? [] };
+  } catch (e) {
+    return { ok: false, students: [], error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+export interface AdminStudentDetail {
+  student: AdminStudent & { notes: string | null };
+  sessions: import('./studentApi').HistorySession[];
+}
+
+export async function cloudGetStudent(id: string): Promise<{ ok: boolean; detail?: AdminStudentDetail; error?: string }> {
+  try {
+    const res = await api(`/api/admin/students/${encodeURIComponent(id)}`, { method: 'GET' }, 'admin');
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      return { ok: false, error: `HTTP ${res.status}: ${body.slice(0, 200)}` };
+    }
+    const data = (await res.json()) as AdminStudentDetail;
+    return { ok: true, detail: data };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+async function adminMutate(path: string, body: unknown, method = 'POST'): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const res = await api(path, { method, body: JSON.stringify(body) }, 'admin');
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      let msg = `HTTP ${res.status}`;
+      try { const p = JSON.parse(text); if (p?.error) msg = p.error; } catch { /* ignore */ }
+      return { ok: false, error: msg };
+    }
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+export function cloudValidateStudent(id: string, status: string, klass?: string): Promise<{ ok: boolean; error?: string }> {
+  return adminMutate(`/api/admin/students/${encodeURIComponent(id)}/validate`, { status, class: klass });
+}
+
+export function cloudResetStudentPassword(id: string, newPassword: string): Promise<{ ok: boolean; error?: string }> {
+  return adminMutate(`/api/admin/students/${encodeURIComponent(id)}/reset-password`, { newPassword });
+}
+
+export async function cloudDeleteStudent(id: string): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const res = await api(`/api/admin/students/${encodeURIComponent(id)}`, { method: 'DELETE' }, 'admin');
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      return { ok: false, error: `HTTP ${res.status}: ${body.slice(0, 200)}` };
+    }
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+export interface AdminClass {
+  class: string;
+  examEnabled: boolean;
+  nValidati: number;
+  nTotali: number;
+  nInCorso: number;
+}
+
+export async function cloudListClasses(): Promise<{ ok: boolean; classes: AdminClass[]; error?: string }> {
+  try {
+    const res = await api('/api/admin/classes', { method: 'GET' }, 'admin');
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      return { ok: false, classes: [], error: `HTTP ${res.status}: ${body.slice(0, 200)}` };
+    }
+    const data = (await res.json()) as { classes: AdminClass[] };
+    return { ok: true, classes: data.classes ?? [] };
+  } catch (e) {
+    return { ok: false, classes: [], error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+export function cloudSetClassExam(klass: string, enabled: boolean): Promise<{ ok: boolean; error?: string }> {
+  return adminMutate('/api/admin/classes', { class: klass, enabled }, 'PUT');
+}
+
+export function cloudIntervene(
+  sessionId: string,
+  type: 'alert' | 'ammonizione' | 'annulla',
+  message: string
+): Promise<{ ok: boolean; error?: string }> {
+  return adminMutate(`/api/sessions/${encodeURIComponent(sessionId)}/intervene`, { type, message });
 }
 
 export function getOrCreateClientId(): string {

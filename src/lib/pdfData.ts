@@ -1,4 +1,4 @@
-import type { EsitoFinale, EventoFocus } from '../types/domain';
+import type { Ammonizione, EsitoFinale, EventoFocus } from '../types/domain';
 
 export interface EsitoSommario {
   schema: 1;
@@ -15,6 +15,7 @@ export interface EsitoSommario {
   motivoConsegna: EsitoFinale['motivoConsegna'];
   esercizi: { id: string; titolo: string; punteggio: number; puntiMax: number }[];
   eventiFocus: EventoFocus[];
+  ammonizioni?: Ammonizione[];
 }
 
 export interface PdfEnvelope {
@@ -47,6 +48,7 @@ export function buildSommario(esito: EsitoFinale): EsitoSommario {
       puntiMax: e.puntiMax,
     })),
     eventiFocus: esito.eventiFocus ?? [],
+    ...(esito.ammonizioni && esito.ammonizioni.length > 0 ? { ammonizioni: esito.ammonizioni } : {}),
   };
 }
 
