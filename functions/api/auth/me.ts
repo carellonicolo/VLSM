@@ -1,6 +1,6 @@
 import { jsonError, jsonOk } from '../../_lib/shared';
 import { authenticateStudent, publicStudent, type AuthEnv } from '../../_lib/auth';
-import { isClassExamEnabled } from '../../_lib/classes';
+import { getClassExam } from '../../_lib/classes';
 import { getVerificaEnabled } from '../../_lib/settings';
 
 /**
@@ -13,14 +13,17 @@ export const onRequestGet: PagesFunction<AuthEnv> = async ({ request, env }) => 
   if (auth instanceof Response) return auth;
 
   try {
-    const master = await getVerificaEnabled(env);
-    const classEnabled = await isClassExamEnabled(env, auth.class);
-    const enabledForClass = !!master && classEnabled;
+    const [master, classExam] = await Promise.all([
+      getVerificaEnabled(env),
+      getClassExam(env, auth.class),
+    ]);
+    const enabledForClass = !!master && classExam.enabled;
     return jsonOk({
       student: publicStudent(auth),
       exam: {
         enabledForClass,
         available: enabledForClass && auth.status === 'validated',
+        level: classExam.level,
       },
     });
   } catch (e) {

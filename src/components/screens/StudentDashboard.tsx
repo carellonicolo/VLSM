@@ -111,7 +111,7 @@ function ChangePasswordCard({ forced }: { forced: boolean }) {
 }
 
 export function StudentDashboard() {
-  const { student, exam, loading } = useAuth();
+  const { student, exam, loading, refresh } = useAuth();
   const [sessions, setSessions] = useState<HistorySession[]>([]);
   const [histLoading, setHistLoading] = useState(true);
   const [histError, setHistError] = useState<string | null>(null);
@@ -131,6 +131,18 @@ export function StudentDashboard() {
   useEffect(() => {
     if (student) void loadHistory();
   }, [student, loadHistory]);
+
+  // Finché la verifica non è disponibile (account da convalidare o classe non
+  // ancora attiva), ricontrolla lo stato ogni 20s: così la verifica si sblocca
+  // da sola appena il docente interviene, senza che lo studente debba aggiornare.
+  useEffect(() => {
+    if (!student) return;
+    if (student.status === 'validated' && exam?.available) return;
+    const id = setInterval(() => {
+      if (!document.hidden) void refresh();
+    }, 20_000);
+    return () => clearInterval(id);
+  }, [student?.status, exam?.available, refresh]);
 
   if (loading) return <AppShell><div className="card">Caricamento…</div></AppShell>;
   if (!student) return null; // RequireAuth gestisce il redirect
@@ -189,7 +201,12 @@ export function StudentDashboard() {
       <h2 style={{ marginBottom: '0.5rem' }}>Il tuo andamento</h2>
       {histLoading && <div className="card muted">⏳ Caricamento storico…</div>}
       {histError && <div className="card error-msg">{histError}</div>}
-      {!histLoading && !histError && <ProgressView sessions={sessions} />}
+      {!histLoading && !histError && (
+        <ProgressView
+          sessions={sessions}
+          subject={{ name: student.fullName, subtitle: `${student.email}${student.class ? ` · ${student.class}` : ''}` }}
+        />
+      )}
 
       {!student.mustChangePassword && <ChangePasswordCard forced={false} />}
     </AppShell>

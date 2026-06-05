@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { parseMultiple, toCsv, downloadCsv, type ParsedFile } from '../../lib/pdfBulk';
+import { cloudListStudents } from '../../lib/cloudSync';
 import type { VerifyStatus } from '../../lib/pdfSign';
 import { SessionsLive } from './SessionsLive';
 import { SettingsTab } from './SettingsTab';
@@ -52,7 +53,24 @@ function badgeLabel(status: VerifyStatus | undefined): string {
 
 export function AdminScreen({ onExit }: Props) {
   const [tab, setTab] = useState<AdminTab>('studenti');
+  const [pendingCount, setPendingCount] = useState(0);
   const [parsing, setParsing] = useState(false);
+
+  // Conteggio studenti in attesa di convalida (badge sulla tab), aggiornato
+  // periodicamente e ad ogni cambio tab.
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      const res = await cloudListStudents('pending');
+      if (active && res.ok) setPendingCount(res.students.length);
+    };
+    void load();
+    const id = setInterval(load, 30_000);
+    return () => {
+      active = false;
+      clearInterval(id);
+    };
+  }, [tab]);
   const [parsed, setParsed] = useState<ParsedFile[]>([]);
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
@@ -137,6 +155,7 @@ export function AdminScreen({ onExit }: Props) {
           onClick={() => setTab('studenti')}
         >
           👥 Studenti
+          {pendingCount > 0 && <span className="tab-badge" title={`${pendingCount} in attesa di convalida`}>{pendingCount}</span>}
         </button>
         <button
           className={tab === 'classi' ? 'btn' : 'btn btn-secondary'}

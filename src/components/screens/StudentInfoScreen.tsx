@@ -10,19 +10,28 @@ interface Props {
   studente: DatiStudente;
   durataMin: number;
   categoria: Categoria;
+  /** Livello impostato dal docente per la verifica: Base/Media/Alta/Esperta | 'random' | 'student' | null. */
+  examLevel?: string | null;
   onStart: (studente: DatiStudente, verificaId: VerificaId, durataMin: number) => void;
   onResume: (sessione: RecoverableSession) => void;
 }
 
 const RAW_DURATA = Number(import.meta.env.VITE_DURATA_DEFAULT_MIN ?? '0');
 const DURATA_BLOCCATA_VERIFICA = Number.isFinite(RAW_DURATA) && RAW_DURATA > 0 ? RAW_DURATA : null;
+const CONCRETE: Difficolta[] = ['Base', 'Media', 'Alta', 'Esperta'];
 
-export function StudentInfoScreen({ studente, durataMin, categoria, onStart, onResume }: Props) {
+export function StudentInfoScreen({ studente, durataMin, categoria, examLevel, onStart, onResume }: Props) {
   const isEsercitazione = categoria === 'esercitazione';
   const durataBloccata = isEsercitazione ? null : DURATA_BLOCCATA_VERIFICA;
 
+  // Modalità livello (solo per la verifica): il docente può fissarlo, renderlo
+  // casuale, o lasciarlo scegliere allo studente.
+  const lockedLevel = !isEsercitazione && examLevel && (CONCRETE as string[]).includes(examLevel) ? (examLevel as Difficolta) : null;
+  const randomMode = !isEsercitazione && examLevel === 'random';
+  const studentChooses = isEsercitazione || !examLevel || examLevel === 'student';
+
   const [durata, setDurata] = useState(durataBloccata ?? durataMin);
-  const [difficolta, setDifficolta] = useState<Difficolta>('Base');
+  const [difficolta, setDifficolta] = useState<Difficolta>(lockedLevel ?? 'Base');
   const [checkingRecover, setCheckingRecover] = useState(false);
   const [recoverable, setRecoverable] = useState<RecoverableSession | null>(null);
   const [recoverConsumed, setRecoverConsumed] = useState(false);
@@ -30,7 +39,12 @@ export function StudentInfoScreen({ studente, durataMin, categoria, onStart, onR
   const valid = durata > 0;
 
   const startNew = () => {
-    const verificaId = pickVerifica(difficolta, categoria);
+    let level: Difficolta = lockedLevel ?? difficolta;
+    if (randomMode) {
+      const avail = DIFFICOLTA_ORDER.filter((d) => verificheByDifficolta(d, categoria).length > 0);
+      level = avail[Math.floor(Math.random() * avail.length)] ?? 'Base';
+    }
+    const verificaId = pickVerifica(level, categoria);
     onStart(studente, verificaId, durataBloccata ?? durata);
   };
 
@@ -84,22 +98,30 @@ export function StudentInfoScreen({ studente, durataMin, categoria, onStart, onR
       <div className="field-row">
         <div className="field">
           <label htmlFor="difficolta">Livello di difficoltà</label>
-          <select
-            id="difficolta"
-            value={difficolta}
-            onChange={(e) => setDifficolta(e.target.value as Difficolta)}
-            style={{ width: '100%', padding: '0.5rem 0.7rem', border: '1px solid var(--border)', borderRadius: 5, fontSize: '0.95rem', fontFamily: 'inherit', background: 'var(--input-bg)' }}
-          >
-            {DIFFICOLTA_ORDER.map((d) => {
-              const count = verificheByDifficolta(d, categoria).length;
-              const label = isEsercitazione ? `simulazion${count === 1 ? 'e' : 'i'}` : `verific${count === 1 ? 'a' : 'he'}`;
-              return (
-                <option key={d} value={d} disabled={count === 0}>
-                  {d} ({count} {label})
-                </option>
-              );
-            })}
-          </select>
+          {studentChooses ? (
+            <select
+              id="difficolta"
+              value={difficolta}
+              onChange={(e) => setDifficolta(e.target.value as Difficolta)}
+              style={{ width: '100%', padding: '0.5rem 0.7rem', border: '1px solid var(--border)', borderRadius: 5, fontSize: '0.95rem', fontFamily: 'inherit', background: 'var(--input-bg)' }}
+            >
+              {DIFFICOLTA_ORDER.map((d) => {
+                const count = verificheByDifficolta(d, categoria).length;
+                const label = isEsercitazione ? `simulazion${count === 1 ? 'e' : 'i'}` : `verific${count === 1 ? 'a' : 'he'}`;
+                return (
+                  <option key={d} value={d} disabled={count === 0}>
+                    {d} ({count} {label})
+                  </option>
+                );
+              })}
+            </select>
+          ) : (
+            <div className="identity-box" style={{ margin: 0 }}>
+              {lockedLevel
+                ? <span>Impostato dal docente: <strong>{lockedLevel}</strong></span>
+                : <span>🎲 <strong>Casuale</strong> — sorteggiato all'avvio</span>}
+            </div>
+          )}
         </div>
         <div className="field">
           <label htmlFor="durata">

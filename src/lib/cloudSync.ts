@@ -1,131 +1,14 @@
-import type { EsitoFinale, RispostaStudente, EventoFocus, Categoria } from '../types/domain';
-
-export interface CloudSessionPayload {
-  clientId: string;
-  studente: { nome: string; classe: string };
-  categoria: Categoria;
-  verificaId: string;
-  verificaTitolo: string;
-  difficolta?: string;
-  startedAt: string;
-  deadlineAt: string;
-  durationMin: number;
-  answers: RispostaStudente;
-  eventiFocus: EventoFocus[];
-  state: 'in_progress' | 'consegnata' | 'abbandonata';
-  consegnatoAt?: string;
-  esito?: EsitoFinale;
-  voto30?: number;
-  signature?: string;
-  signedAt?: string;
-  motivoConsegna?: 'volontaria' | 'timeout';
-}
-
-export interface RecoverableSession {
-  id: string;
-  studente: { nome: string; classe: string };
-  categoria: Categoria;
-  verificaId: string;
-  verificaTitolo: string;
-  difficolta?: string | null;
-  startedAt: string;
-  deadlineAt: string;
-  updatedAt: string;
-  durationMin: number;
-  answers: RispostaStudente;
-  eventiFocus: EventoFocus[];
-  clientId: string;
-  previousClientUserAgent?: string | null;
-}
-
-const STUDENT_PASSWORD = import.meta.env.VITE_APP_PASSWORD ?? 'vlsm2026';
+// Funzioni lato DOCENTE: autenticano con la password admin (header X-VLSM-Auth).
+// Le chiamate degli studenti usano invece il token firmato di lib/auth.ts.
 const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD ?? 'docente2026';
 
-// Password studente "effettiva": dopo il login validato dal server usiamo
-// quella digitata dallo studente (che riflette eventuali cambi password
-// runtime fatti dal docente), NON la costante compilata nel bundle.
-const STUDENT_AUTH_KEY = 'vlsm_student_auth';
-let runtimeStudentPassword: string | null = null;
-
-export function setStudentPassword(pwd: string): void {
-  runtimeStudentPassword = pwd;
-  try {
-    localStorage.setItem(STUDENT_AUTH_KEY, pwd);
-  } catch {
-    // ignore
-  }
-}
-
-export function clearStudentPassword(): void {
-  runtimeStudentPassword = null;
-  try {
-    localStorage.removeItem(STUDENT_AUTH_KEY);
-  } catch {
-    // ignore
-  }
-}
-
-function studentAuthValue(): string {
-  if (runtimeStudentPassword) return runtimeStudentPassword;
-  try {
-    const stored = localStorage.getItem(STUDENT_AUTH_KEY);
-    if (stored) {
-      runtimeStudentPassword = stored;
-      return stored;
-    }
-  } catch {
-    // ignore
-  }
-  return STUDENT_PASSWORD;
-}
-
-async function api(path: string, init: RequestInit, role: 'student' | 'admin' = 'student'): Promise<Response> {
+async function api(path: string, init: RequestInit): Promise<Response> {
   const headers = new Headers(init.headers);
-  headers.set('x-vlsm-auth', role === 'admin' ? ADMIN_PASSWORD : studentAuthValue());
+  headers.set('x-vlsm-auth', ADMIN_PASSWORD);
   if (init.body && !headers.has('content-type')) {
     headers.set('content-type', 'application/json');
   }
   return fetch(path, { ...init, headers });
-}
-
-const SAVE_TIMEOUT_MS = 7000;
-
-export async function cloudSave(payload: CloudSessionPayload): Promise<{ ok: boolean; updatedAt?: string; error?: string }> {
-  const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), SAVE_TIMEOUT_MS);
-  try {
-    const res = await api('/api/session/save', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-      signal: ctrl.signal,
-    });
-    if (!res.ok) {
-      const body = await res.text().catch(() => '');
-      return { ok: false, error: `HTTP ${res.status}: ${body.slice(0, 200)}` };
-    }
-    const data = (await res.json()) as { ok: boolean; updatedAt?: string };
-    return { ok: !!data.ok, updatedAt: data.updatedAt };
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) };
-  } finally {
-    clearTimeout(t);
-  }
-}
-
-export async function cloudRecover(nome: string, classe: string): Promise<RecoverableSession | null> {
-  const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), 6000);
-  try {
-    const url = `/api/session/recover?nome=${encodeURIComponent(nome)}&classe=${encodeURIComponent(classe)}`;
-    const res = await api(url, { method: 'GET', signal: ctrl.signal });
-    if (!res.ok) return null;
-    const data = (await res.json()) as { found: boolean; session?: RecoverableSession };
-    return data.found && data.session ? data.session : null;
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(t);
-  }
 }
 
 export type SessionState = 'in_progress' | 'consegnata' | 'abbandonata' | 'annullata';
@@ -161,7 +44,7 @@ export interface CloudSessionRow {
 export async function cloudListSessions(state?: string): Promise<{ ok: boolean; sessions: CloudSessionRow[]; error?: string }> {
   try {
     const url = state && state !== 'all' ? `/api/sessions/list?state=${encodeURIComponent(state)}` : '/api/sessions/list';
-    const res = await api(url, { method: 'GET' }, 'admin');
+    const res = await api(url, { method: 'GET' });
     if (!res.ok) {
       const body = await res.text().catch(() => '');
       return { ok: false, sessions: [], error: `HTTP ${res.status}: ${body.slice(0, 200)}` };
@@ -202,7 +85,7 @@ export interface CloudSessionDetail {
 
 export async function cloudGetSession(id: string): Promise<{ ok: boolean; session?: CloudSessionDetail; error?: string }> {
   try {
-    const res = await api(`/api/sessions/${encodeURIComponent(id)}`, { method: 'GET' }, 'admin');
+    const res = await api(`/api/sessions/${encodeURIComponent(id)}`, { method: 'GET' });
     if (!res.ok) {
       const body = await res.text().catch(() => '');
       return { ok: false, error: `HTTP ${res.status}: ${body.slice(0, 200)}` };
@@ -219,7 +102,7 @@ export async function cloudReopenSession(id: string, extendMinutes = 15): Promis
     const res = await api(`/api/sessions/${encodeURIComponent(id)}/reopen`, {
       method: 'POST',
       body: JSON.stringify({ extendMinutes }),
-    }, 'admin');
+    });
     if (!res.ok) {
       const body = await res.text().catch(() => '');
       return { ok: false, error: `HTTP ${res.status}: ${body.slice(0, 200)}` };
@@ -230,37 +113,7 @@ export async function cloudReopenSession(id: string, extendMinutes = 15): Promis
   }
 }
 
-// ====== Auth + Settings (runtime config dal DB) ======
-
-export interface PublicConfig { verificaEnabled: boolean }
-
-export async function cloudGetConfig(): Promise<PublicConfig> {
-  try {
-    const res = await fetch('/api/auth/config', { method: 'GET' });
-    if (!res.ok) return { verificaEnabled: true };
-    const data = (await res.json()) as PublicConfig;
-    return { verificaEnabled: data.verificaEnabled !== false };
-  } catch {
-    return { verificaEnabled: true };
-  }
-}
-
-export interface StudentLoginResult { ok: boolean; status: number; error?: string }
-
-export async function cloudLoginStudent(password: string): Promise<StudentLoginResult> {
-  try {
-    const res = await fetch('/api/auth/login-student', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ password }),
-    });
-    if (res.ok) return { ok: true, status: res.status };
-    const body = (await res.json().catch(() => ({}))) as { error?: string };
-    return { ok: false, status: res.status, error: body.error };
-  } catch (e) {
-    return { ok: false, status: 0, error: e instanceof Error ? e.message : String(e) };
-  }
-}
+// ====== Settings docente (runtime config dal DB) ======
 
 export interface AdminSettings {
   verificaEnabled: boolean;
@@ -272,7 +125,7 @@ export interface AdminSettings {
 
 export async function cloudGetAdminSettings(): Promise<{ ok: boolean; settings?: AdminSettings; error?: string }> {
   try {
-    const res = await api('/api/admin/settings', { method: 'GET' }, 'admin');
+    const res = await api('/api/admin/settings', { method: 'GET' });
     if (!res.ok) {
       const body = await res.text().catch(() => '');
       return { ok: false, error: `HTTP ${res.status}: ${body.slice(0, 200)}` };
@@ -289,28 +142,10 @@ export async function cloudSetVerificaEnabled(enabled: boolean): Promise<{ ok: b
     const res = await api('/api/admin/verifica-enabled', {
       method: 'PUT',
       body: JSON.stringify({ enabled }),
-    }, 'admin');
+    });
     if (!res.ok) {
       const body = await res.text().catch(() => '');
       return { ok: false, error: `HTTP ${res.status}: ${body.slice(0, 200)}` };
-    }
-    return { ok: true };
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) };
-  }
-}
-
-export async function cloudChangeStudentPassword(newPassword: string): Promise<{ ok: boolean; error?: string }> {
-  try {
-    const res = await api('/api/admin/student-password', {
-      method: 'POST',
-      body: JSON.stringify({ newPassword }),
-    }, 'admin');
-    if (!res.ok) {
-      const body = await res.text().catch(() => '');
-      let msg = `HTTP ${res.status}`;
-      try { const parsed = JSON.parse(body); if (parsed?.error) msg = parsed.error; } catch { /* ignore */ }
-      return { ok: false, error: msg };
     }
     return { ok: true };
   } catch (e) {
@@ -331,7 +166,7 @@ export interface AuditEntry {
 
 export async function cloudGetAuditLog(): Promise<{ ok: boolean; entries: AuditEntry[]; error?: string }> {
   try {
-    const res = await api('/api/admin/audit', { method: 'GET' }, 'admin');
+    const res = await api('/api/admin/audit', { method: 'GET' });
     if (!res.ok) {
       const body = await res.text().catch(() => '');
       return { ok: false, entries: [], error: `HTTP ${res.status}: ${body.slice(0, 200)}` };
@@ -345,7 +180,7 @@ export async function cloudGetAuditLog(): Promise<{ ok: boolean; entries: AuditE
 
 export async function cloudDeleteSession(id: string): Promise<{ ok: boolean; error?: string }> {
   try {
-    const res = await api(`/api/sessions/${encodeURIComponent(id)}`, { method: 'DELETE' }, 'admin');
+    const res = await api(`/api/sessions/${encodeURIComponent(id)}`, { method: 'DELETE' });
     if (!res.ok) {
       const body = await res.text().catch(() => '');
       return { ok: false, error: `HTTP ${res.status}: ${body.slice(0, 200)}` };
@@ -380,7 +215,7 @@ export async function cloudListStudents(status = 'all', klass = ''): Promise<{ o
     if (status && status !== 'all') params.set('status', status);
     if (klass) params.set('class', klass);
     const qs = params.toString();
-    const res = await api(`/api/admin/students${qs ? `?${qs}` : ''}`, { method: 'GET' }, 'admin');
+    const res = await api(`/api/admin/students${qs ? `?${qs}` : ''}`, { method: 'GET' });
     if (!res.ok) {
       const body = await res.text().catch(() => '');
       return { ok: false, students: [], error: `HTTP ${res.status}: ${body.slice(0, 200)}` };
@@ -399,7 +234,7 @@ export interface AdminStudentDetail {
 
 export async function cloudGetStudent(id: string): Promise<{ ok: boolean; detail?: AdminStudentDetail; error?: string }> {
   try {
-    const res = await api(`/api/admin/students/${encodeURIComponent(id)}`, { method: 'GET' }, 'admin');
+    const res = await api(`/api/admin/students/${encodeURIComponent(id)}`, { method: 'GET' });
     if (!res.ok) {
       const body = await res.text().catch(() => '');
       return { ok: false, error: `HTTP ${res.status}: ${body.slice(0, 200)}` };
@@ -413,7 +248,7 @@ export async function cloudGetStudent(id: string): Promise<{ ok: boolean; detail
 
 async function adminMutate(path: string, body: unknown, method = 'POST'): Promise<{ ok: boolean; error?: string }> {
   try {
-    const res = await api(path, { method, body: JSON.stringify(body) }, 'admin');
+    const res = await api(path, { method, body: JSON.stringify(body) });
     if (!res.ok) {
       const text = await res.text().catch(() => '');
       let msg = `HTTP ${res.status}`;
@@ -436,7 +271,7 @@ export function cloudResetStudentPassword(id: string, newPassword: string): Prom
 
 export async function cloudDeleteStudent(id: string): Promise<{ ok: boolean; error?: string }> {
   try {
-    const res = await api(`/api/admin/students/${encodeURIComponent(id)}`, { method: 'DELETE' }, 'admin');
+    const res = await api(`/api/admin/students/${encodeURIComponent(id)}`, { method: 'DELETE' });
     if (!res.ok) {
       const body = await res.text().catch(() => '');
       return { ok: false, error: `HTTP ${res.status}: ${body.slice(0, 200)}` };
@@ -450,6 +285,7 @@ export async function cloudDeleteStudent(id: string): Promise<{ ok: boolean; err
 export interface AdminClass {
   class: string;
   examEnabled: boolean;
+  examLevel: string | null;
   nValidati: number;
   nTotali: number;
   nInCorso: number;
@@ -457,7 +293,7 @@ export interface AdminClass {
 
 export async function cloudListClasses(): Promise<{ ok: boolean; classes: AdminClass[]; error?: string }> {
   try {
-    const res = await api('/api/admin/classes', { method: 'GET' }, 'admin');
+    const res = await api('/api/admin/classes', { method: 'GET' });
     if (!res.ok) {
       const body = await res.text().catch(() => '');
       return { ok: false, classes: [], error: `HTTP ${res.status}: ${body.slice(0, 200)}` };
@@ -469,8 +305,8 @@ export async function cloudListClasses(): Promise<{ ok: boolean; classes: AdminC
   }
 }
 
-export function cloudSetClassExam(klass: string, enabled: boolean): Promise<{ ok: boolean; error?: string }> {
-  return adminMutate('/api/admin/classes', { class: klass, enabled }, 'PUT');
+export function cloudSetClassExam(klass: string, enabled: boolean, level?: string | null): Promise<{ ok: boolean; error?: string }> {
+  return adminMutate('/api/admin/classes', { class: klass, enabled, level: level ?? undefined }, 'PUT');
 }
 
 export function cloudIntervene(

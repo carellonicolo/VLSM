@@ -1,23 +1,21 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-  cloudChangeStudentPassword,
   cloudGetAdminSettings,
   cloudGetAuditLog,
   cloudSetVerificaEnabled,
   type AdminSettings,
   type AuditEntry,
 } from '../../lib/cloudSync';
+import { useToast } from '../ui/Toast';
 
 interface Props { active: boolean }
 
 export function SettingsTab({ active }: Props) {
+  const toast = useToast();
   const [settings, setSettings] = useState<AdminSettings | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [newPwd, setNewPwd] = useState('');
-  const [newPwdConfirm, setNewPwdConfirm] = useState('');
-  const [pwdMsg, setPwdMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
   const [auditEntries, setAuditEntries] = useState<AuditEntry[]>([]);
   const [showAudit, setShowAudit] = useState(false);
 
@@ -42,32 +40,11 @@ export function SettingsTab({ active }: Props) {
     setBusy(true);
     const res = await cloudSetVerificaEnabled(!settings.verificaEnabled);
     setBusy(false);
-    if (res.ok) void reload();
-    else alert(`Errore: ${res.error}`);
-  };
-
-  const onChangePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setPwdMsg(null);
-    if (newPwd.length < 4) {
-      setPwdMsg({ type: 'err', text: 'La password deve essere lunga almeno 4 caratteri.' });
-      return;
-    }
-    if (newPwd !== newPwdConfirm) {
-      setPwdMsg({ type: 'err', text: 'Le due password non corrispondono.' });
-      return;
-    }
-    if (!confirm(`Confermi la nuova password? Le sessioni in corso potranno usare la vecchia per 60 minuti, i nuovi login richiederanno subito la nuova.`)) return;
-    setBusy(true);
-    const res = await cloudChangeStudentPassword(newPwd);
-    setBusy(false);
     if (res.ok) {
-      setPwdMsg({ type: 'ok', text: 'Password aggiornata. Grace period di 60 minuti attivo per le sessioni in corso.' });
-      setNewPwd('');
-      setNewPwdConfirm('');
+      toast(settings.verificaEnabled ? 'Modalità verifica disattivata.' : 'Modalità verifica attivata.', 'success');
       void reload();
     } else {
-      setPwdMsg({ type: 'err', text: res.error ?? 'Errore.' });
+      toast(`Errore: ${res.error}`, 'error');
     }
   };
 
@@ -75,7 +52,7 @@ export function SettingsTab({ active }: Props) {
     setShowAudit(true);
     const res = await cloudGetAuditLog();
     if (res.ok) setAuditEntries(res.entries);
-    else alert(`Errore: ${res.error}`);
+    else toast(`Errore: ${res.error}`, 'error');
   };
 
   if (loading && !settings) {
@@ -100,12 +77,14 @@ export function SettingsTab({ active }: Props) {
 
   return (
     <>
-      {/* Toggle modalità verifica */}
+      {/* Toggle modalità verifica (master globale) */}
       <div className="card">
-        <h3 style={{ marginTop: 0 }}>🟢 Modalità verifica</h3>
+        <h3 style={{ marginTop: 0 }}>🟢 Modalità verifica (master)</h3>
         <p className="muted">
-          Quando disattivata, gli studenti vedono la sezione "Svolgi la verifica" disabilitata sulla
-          schermata di login. Le esercitazioni libere e l'accesso docente restano sempre attivi.
+          Interruttore generale: quando è <strong>disattivato</strong>, la verifica è bloccata per
+          <strong> tutte le classi</strong>. Per sbloccare l'esame a una singola classe usa la tab
+          <strong> «🎛 Classi &amp; esame»</strong>. Le esercitazioni restano sempre disponibili agli
+          studenti loggati.
         </p>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
           <div
@@ -129,73 +108,6 @@ export function SettingsTab({ active }: Props) {
           </button>
         </div>
       </div>
-
-      {/* Cambio password studente */}
-      <form className="card" onSubmit={onChangePassword}>
-        <h3 style={{ marginTop: 0 }}>🔑 Password studente</h3>
-        <p className="muted">
-          {settings.studentPasswordSet ? (
-            <>Una password personalizzata è attiva dal {new Date(settings.studentPasswordChangedAt).toLocaleString('it-IT')}.</>
-          ) : (
-            <>Nessuna password personalizzata: viene usata la variabile d'ambiente <code>VITE_APP_PASSWORD</code> / <code>APP_PASSWORD</code>.</>
-          )}
-        </p>
-        {settings.gracePeriodValid && (
-          <div
-            style={{
-              background: 'var(--warn-bg)',
-              color: 'var(--warn-text)',
-              border: '1px solid var(--warn-border)',
-              padding: '0.5rem 0.75rem',
-              borderRadius: 6,
-              marginBottom: '0.75rem',
-              fontSize: '0.88rem',
-            }}
-          >
-            ⏳ Grace period attivo fino alle{' '}
-            <strong>{new Date(settings.gracePeriodEndsAt).toLocaleTimeString('it-IT')}</strong>:
-            le sessioni iniziate prima dell'ultimo cambio password possono ancora sincronizzare con la
-            vecchia password.
-          </div>
-        )}
-        <div className="field">
-          <label htmlFor="new-pwd">Nuova password</label>
-          <input
-            id="new-pwd"
-            type="password"
-            value={newPwd}
-            onChange={(e) => setNewPwd(e.target.value)}
-            autoComplete="new-password"
-            disabled={busy}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="new-pwd-confirm">Conferma nuova password</label>
-          <input
-            id="new-pwd-confirm"
-            type="password"
-            value={newPwdConfirm}
-            onChange={(e) => setNewPwdConfirm(e.target.value)}
-            autoComplete="new-password"
-            disabled={busy}
-          />
-        </div>
-        {pwdMsg && (
-          <div
-            className={pwdMsg.type === 'ok' ? 'muted' : 'error-msg'}
-            style={
-              pwdMsg.type === 'ok'
-                ? { background: 'var(--success-bg)', color: 'var(--success)', padding: '0.5rem 0.75rem', borderRadius: 6, marginBottom: '0.75rem' }
-                : { marginBottom: '0.75rem' }
-            }
-          >
-            {pwdMsg.text}
-          </div>
-        )}
-        <button className="btn" type="submit" disabled={busy || newPwd.length === 0}>
-          Cambia password studente
-        </button>
-      </form>
 
       {/* Audit log */}
       <div className="card">

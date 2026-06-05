@@ -150,10 +150,12 @@ L'app sincronizza automaticamente le verifiche degli studenti su un database SQL
    - Poi `migrations/0002_settings.sql` e di nuovo **Execute** (aggiunge la
      tabella `settings` per il pannello admin: toggle modalità verifica e
      cambio password studente da UI).
-   - Infine `migrations/0003_accounts.sql` e **Execute** (account studenti,
+   - Poi `migrations/0003_accounts.sql` e **Execute** (account studenti,
      convalida docente, sblocco verifica per-classe, interventi docente).
      ⚠️ Va eseguito **una sola volta**: gli `ALTER TABLE` finali danno errore
      se rilanciati (le colonne esistono già).
+   - Infine `migrations/0004_exam_level.sql` e **Execute** (livello della
+     verifica scelto dal docente per ogni classe). Anche questo una sola volta.
 
 3. **Collega il DB al progetto Pages**
    - Pages → progetto `vlsm` → **Settings** → **Functions** → sezione **D1 database bindings** → **Add binding**
@@ -211,7 +213,8 @@ Dall'upgrade "account" l'accesso a esercitazioni e verifiche richiede un
   **Convalida** (= approva + conferma la **classe**), metti in attesa, rifiuta, disabilita,
   **reset password** (lo studente la cambia al primo accesso), **storico** (andamento e prove),
   elimina.
-- Tab **🎛 Classi & esame**: sblocca la verifica **per singola classe**. Solo gli studenti
+- Tab **🎛 Classi & esame**: sblocca la verifica **per singola classe** e scegli il
+  **livello** (fisso, casuale, o scelto dallo studente). Solo gli studenti
   **convalidati** di una classe **attiva** possono iniziare una verifica. Esiste anche
   l'interruttore generale "Modalità verifica" (tab Impostazioni) come master: se spento,
   l'esame è bloccato per tutte le classi.

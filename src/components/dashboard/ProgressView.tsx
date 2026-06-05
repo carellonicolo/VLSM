@@ -1,17 +1,73 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { HistorySession } from '../../lib/studentApi';
 import { computeStats, type ProgressStats } from '../../lib/progress';
+import { buildCsv, downloadBlob, downloadCsv, safeFileName } from '../../lib/csv';
+import { useToast } from '../ui/Toast';
 
 interface Props {
   sessions: HistorySession[];
   compact?: boolean;
+  /** Nome/sottotitolo usati per etichettare gli export (CSV/PDF). */
+  subject?: { name: string; subtitle?: string };
 }
 
-export function ProgressView({ sessions, compact }: Props) {
+function statoTesto(st: string): string {
+  if (st === 'consegnata') return 'Consegnata';
+  if (st === 'annullata') return 'Annullata';
+  if (st === 'in_progress') return 'In corso';
+  if (st === 'abbandonata') return 'Abbandonata';
+  return st;
+}
+
+export function ProgressView({ sessions, compact, subject }: Props) {
   const stats = useMemo(() => computeStats(sessions), [sessions]);
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const toast = useToast();
+  const name = subject?.name ?? 'Andamento';
+
+  const exportCsv = () => {
+    const headers = ['Data', 'Tipo', 'Prova', 'Livello', 'Voto/30', 'Distrazioni', 'Ammonizioni', 'Stato'];
+    const rows = sessions.map((r) => [
+      new Date(r.started_at).toLocaleString('it-IT'),
+      r.categoria === 'verifica' ? 'Verifica' : 'Esercitazione',
+      r.verifica_titolo,
+      r.difficolta ?? '',
+      r.voto30 ?? '',
+      r.distrazioni_count ?? 0,
+      r.ammonizioni_count ?? 0,
+      statoTesto(r.state),
+    ]);
+    downloadCsv(`andamento_${safeFileName(name)}.csv`, buildCsv(headers, rows));
+  };
+
+  const exportPdf = async () => {
+    setPdfBusy(true);
+    try {
+      const [{ pdf }, { AndamentoPdf }] = await Promise.all([
+        import('@react-pdf/renderer'),
+        import('../pdf/AndamentoPdf'),
+      ]);
+      const blob = await pdf(
+        <AndamentoPdf subjectName={name} subtitle={subject?.subtitle} stats={stats} sessions={sessions} />
+      ).toBlob();
+      downloadBlob(`andamento_${safeFileName(name)}.pdf`, blob);
+    } catch (e) {
+      toast(`Errore generazione PDF: ${e instanceof Error ? e.message : String(e)}`, 'error');
+    } finally {
+      setPdfBusy(false);
+    }
+  };
 
   return (
     <>
+      <div className="actions" style={{ justifyContent: 'flex-end', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
+        <button className="btn btn-secondary" type="button" onClick={exportCsv} disabled={sessions.length === 0}>
+          📥 Esporta CSV
+        </button>
+        <button className="btn btn-secondary" type="button" onClick={() => void exportPdf()} disabled={sessions.length === 0 || pdfBusy}>
+          {pdfBusy ? 'Generazione PDF…' : '📄 Esporta PDF'}
+        </button>
+      </div>
       <StatsCards stats={stats} />
       <div className="card">
         <h3 style={{ marginTop: 0 }}>📈 Andamento voti (verifiche)</h3>

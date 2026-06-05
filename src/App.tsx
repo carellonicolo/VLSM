@@ -4,6 +4,8 @@ import { HomePage } from './components/screens/HomePage';
 import { LoginAccountScreen } from './components/screens/LoginAccountScreen';
 import { RegisterScreen } from './components/screens/RegisterScreen';
 import { AuthProvider, useAuth } from './hooks/useAuth';
+import { ToastProvider } from './components/ui/Toast';
+import { ConfirmProvider } from './components/ui/Confirm';
 
 // Le route pesanti sono caricate on-demand.
 const CalcolatoriPage = lazy(() =>
@@ -41,21 +43,25 @@ function RequireAuth({ children }: { children: ReactNode }) {
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <Suspense fallback={<RouteFallback />}>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/login" element={<LoginAccountScreen />} />
-            <Route path="/registrazione" element={<RegisterScreen />} />
-            <Route path="/dashboard" element={<RequireAuth><StudentDashboard /></RequireAuth>} />
-            <Route path="/calcolatori" element={<CalcolatoriPage />} />
-            <Route path="/verifica" element={<RequireAuth><TestFlow categoria="verifica" /></RequireAuth>} />
-            <Route path="/esercitazione" element={<RequireAuth><TestFlow categoria="esercitazione" /></RequireAuth>} />
-            <Route path="/admin" element={<AdminPage />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </Suspense>
-      </AuthProvider>
+      <ToastProvider>
+        <ConfirmProvider>
+          <AuthProvider>
+            <Suspense fallback={<RouteFallback />}>
+              <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/login" element={<LoginAccountScreen />} />
+                <Route path="/registrazione" element={<RegisterScreen />} />
+                <Route path="/dashboard" element={<RequireAuth><StudentDashboard /></RequireAuth>} />
+                <Route path="/calcolatori" element={<CalcolatoriPage />} />
+                <Route path="/verifica" element={<RequireAuth><TestFlow categoria="verifica" /></RequireAuth>} />
+                <Route path="/esercitazione" element={<RequireAuth><TestFlow categoria="esercitazione" /></RequireAuth>} />
+                <Route path="/admin" element={<AdminPage />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Suspense>
+          </AuthProvider>
+        </ConfirmProvider>
+      </ToastProvider>
     </BrowserRouter>
   );
 }
