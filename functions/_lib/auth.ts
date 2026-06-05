@@ -19,7 +19,8 @@ export interface AuthEnv extends SharedEnv {
 }
 
 const TOKEN_TTL_MS = 30 * 24 * 60 * 60_000; // 30 giorni
-const PBKDF2_ITER = 150_000;
+// Cloudflare Workers limita PBKDF2 a max 100.000 iterazioni.
+const PBKDF2_ITER = 100_000;
 const DEV_SECRET = 'vlsm-dev-insecure-auth-secret-please-set-VLSM_AUTH_SECRET';
 
 function authSecret(env: AuthEnv): string {
