@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-  cloudChangeStudentPassword,
   cloudGetAdminSettings,
   cloudGetAuditLog,
   cloudSetVerificaEnabled,
@@ -15,9 +14,6 @@ export function SettingsTab({ active }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [newPwd, setNewPwd] = useState('');
-  const [newPwdConfirm, setNewPwdConfirm] = useState('');
-  const [pwdMsg, setPwdMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
   const [auditEntries, setAuditEntries] = useState<AuditEntry[]>([]);
   const [showAudit, setShowAudit] = useState(false);
 
@@ -44,31 +40,6 @@ export function SettingsTab({ active }: Props) {
     setBusy(false);
     if (res.ok) void reload();
     else alert(`Errore: ${res.error}`);
-  };
-
-  const onChangePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setPwdMsg(null);
-    if (newPwd.length < 4) {
-      setPwdMsg({ type: 'err', text: 'La password deve essere lunga almeno 4 caratteri.' });
-      return;
-    }
-    if (newPwd !== newPwdConfirm) {
-      setPwdMsg({ type: 'err', text: 'Le due password non corrispondono.' });
-      return;
-    }
-    if (!confirm(`Confermi la nuova password? Le sessioni in corso potranno usare la vecchia per 60 minuti, i nuovi login richiederanno subito la nuova.`)) return;
-    setBusy(true);
-    const res = await cloudChangeStudentPassword(newPwd);
-    setBusy(false);
-    if (res.ok) {
-      setPwdMsg({ type: 'ok', text: 'Password aggiornata. Grace period di 60 minuti attivo per le sessioni in corso.' });
-      setNewPwd('');
-      setNewPwdConfirm('');
-      void reload();
-    } else {
-      setPwdMsg({ type: 'err', text: res.error ?? 'Errore.' });
-    }
   };
 
   const loadAudit = async () => {
@@ -104,8 +75,9 @@ export function SettingsTab({ active }: Props) {
       <div className="card">
         <h3 style={{ marginTop: 0 }}>🟢 Modalità verifica</h3>
         <p className="muted">
-          Quando disattivata, gli studenti vedono la sezione "Svolgi la verifica" disabilitata sulla
-          schermata di login. Le esercitazioni libere e l'accesso docente restano sempre attivi.
+          Master-switch globale delle verifiche ufficiali. Quando disattivata, gli studenti
+          vedono la sezione "Svolgi la verifica" disabilitata. Le esercitazioni libere e
+          l'accesso docente restano sempre attivi.
         </p>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
           <div
@@ -130,72 +102,19 @@ export function SettingsTab({ active }: Props) {
         </div>
       </div>
 
-      {/* Cambio password studente */}
-      <form className="card" onSubmit={onChangePassword}>
-        <h3 style={{ marginTop: 0 }}>🔑 Password studente</h3>
+      {/* Accesso studenti (SSO) */}
+      <div className="card">
+        <h3 style={{ marginTop: 0 }}>🔐 Accesso studenti</h3>
         <p className="muted">
-          {settings.studentPasswordSet ? (
-            <>Una password personalizzata è attiva dal {new Date(settings.studentPasswordChangedAt).toLocaleString('it-IT')}.</>
-          ) : (
-            <>Nessuna password personalizzata: viene usata la variabile d'ambiente <code>VITE_APP_PASSWORD</code> / <code>APP_PASSWORD</code>.</>
-          )}
+          L'accesso è gestito dal login centralizzato{' '}
+          <a href="https://auth.nicolocarello.it/admin" target="_blank" rel="noopener noreferrer">
+            auth.nicolocarello.it
+          </a>
+          . Gli studenti accedono con il proprio account; per svolgere una verifica ufficiale
+          devono avere una <strong>classe approvata</strong> dal docente. Utenti, classi e
+          approvazioni si gestiscono dalla console super-admin dell'IdP, non più da qui.
         </p>
-        {settings.gracePeriodValid && (
-          <div
-            style={{
-              background: 'var(--warn-bg)',
-              color: 'var(--warn-text)',
-              border: '1px solid var(--warn-border)',
-              padding: '0.5rem 0.75rem',
-              borderRadius: 6,
-              marginBottom: '0.75rem',
-              fontSize: '0.88rem',
-            }}
-          >
-            ⏳ Grace period attivo fino alle{' '}
-            <strong>{new Date(settings.gracePeriodEndsAt).toLocaleTimeString('it-IT')}</strong>:
-            le sessioni iniziate prima dell'ultimo cambio password possono ancora sincronizzare con la
-            vecchia password.
-          </div>
-        )}
-        <div className="field">
-          <label htmlFor="new-pwd">Nuova password</label>
-          <input
-            id="new-pwd"
-            type="password"
-            value={newPwd}
-            onChange={(e) => setNewPwd(e.target.value)}
-            autoComplete="new-password"
-            disabled={busy}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="new-pwd-confirm">Conferma nuova password</label>
-          <input
-            id="new-pwd-confirm"
-            type="password"
-            value={newPwdConfirm}
-            onChange={(e) => setNewPwdConfirm(e.target.value)}
-            autoComplete="new-password"
-            disabled={busy}
-          />
-        </div>
-        {pwdMsg && (
-          <div
-            className={pwdMsg.type === 'ok' ? 'muted' : 'error-msg'}
-            style={
-              pwdMsg.type === 'ok'
-                ? { background: 'var(--success-bg)', color: 'var(--success)', padding: '0.5rem 0.75rem', borderRadius: 6, marginBottom: '0.75rem' }
-                : { marginBottom: '0.75rem' }
-            }
-          >
-            {pwdMsg.text}
-          </div>
-        )}
-        <button className="btn" type="submit" disabled={busy || newPwd.length === 0}>
-          Cambia password studente
-        </button>
-      </form>
+      </div>
 
       {/* Audit log */}
       <div className="card">

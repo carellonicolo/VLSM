@@ -9,8 +9,8 @@ App web frontend-only per somministrare verifiche di **VLSM** (Variable Length S
 
 ## Funzionamento
 
-1. Lo studente entra con una password condivisa.
-2. Inserisce nome e classe; il sistema sorteggia una delle 6 verifiche.
+1. Lo studente accede tramite il **login centralizzato SSO** (`auth.nicolocarello.it`). Per svolgere una verifica ufficiale serve un account attivo con una **classe approvata** dal docente.
+2. Nome e classe sono presi dall'account SSO (nome bloccato, classe scelta tra quelle approvate); il sistema sorteggia una delle verifiche.
 3. Svolge la verifica con timer configurabile (default 60 min).
 4. Allo scadere, o cliccando "Termina", l'app corregge automaticamente e mostra il voto.
 5. Lo studente scarica un PDF con risposte, errori evidenziati, voto e spazio firme.
@@ -31,8 +31,6 @@ npm run preview    # preview del build di produzione
 Crea un file `.env.local` (o configura le env var su Cloudflare):
 
 ```
-VITE_APP_PASSWORD=vlsm2026          # password studente per svolgere le verifiche
-VITE_ADMIN_PASSWORD=docente2026     # password docente per la correzione bulk
 VITE_DURATA_DEFAULT_MIN=60
 ```
 
@@ -40,7 +38,19 @@ VITE_DURATA_DEFAULT_MIN=60
 - `VITE_DURATA_DEFAULT_MIN=0` (o non impostata) → lo studente può scegliere liberamente la durata prima di iniziare (default mostrato: 60 min).
 - `VITE_DURATA_DEFAULT_MIN=N` con `N>0` → il campo durata è visibile ma **bloccato** sul valore `N`. Lo studente non può modificarlo. Per cambiarlo: aggiorni la env var su Cloudflare e fai un nuovo deploy.
 
-> **Attenzione**: entrambe le password (`VITE_APP_PASSWORD` e `VITE_ADMIN_PASSWORD`) vengono inlined nel bundle JS a build-time. Sono una barriera "soft", non sicurezza reale. Tieni la password docente diversa da quella studente per non far entrare gli studenti nella modalità di correzione.
+### Autenticazione (SSO centralizzato)
+
+L'app **non usa più password condivise**. L'accesso è gestito dall'Identity Provider centrale
+`auth.nicolocarello.it` (cookie condiviso `nc_session`, JWT ES256 verificato con la sola chiave
+pubblica via JWKS — nessun segreto nell'app). Dettagli e flusso: vedi `functions/_lib/sso.ts`,
+`functions/api/me.ts` e `src/lib/auth.ts`.
+
+- **Studente**: per la verifica ufficiale deve essere loggato, attivo e con una **classe approvata**
+  dal docente. L'esercitazione libera resta **senza login**.
+- **Docente**: la modalità `/admin` è riservata agli utenti **super-admin** sull'IdP.
+- **Requisito dominio**: l'app deve essere servita da un sottodominio di `nicolocarello.it`
+  (es. `vlsm.nicolocarello.it`). Sui domini `*.pages.dev` il cookie condiviso non arriva e il login
+  non funziona.
 
 ## Deploy su Cloudflare Pages
 
@@ -54,12 +64,11 @@ VITE_DURATA_DEFAULT_MIN=60
    - **Build output directory**: `dist`
    - **Root directory**: `/` (lascia vuoto)
 4. **Environment variables** (sia Production che Preview):
-   - `VITE_APP_PASSWORD` = password che dai agli studenti per la verifica
-   - `VITE_ADMIN_PASSWORD` = password separata che usi tu per la correzione bulk
    - `VITE_DURATA_DEFAULT_MIN` = `60` (o altro valore di default)
    - `VLSM_HMAC_SECRET` = secret server-side per firma HMAC (vedi sezione "Firma digitale" sotto). Tipo: **Secret**.
    - `NODE_VERSION` = `20`
-5. **Deploy**. Al primo build Cloudflare crea l'URL `https://vlsm.pages.dev` (puoi anche collegare un dominio personalizzato).
+   - _Nessuna password_: l'autenticazione è delegata all'SSO (vedi sezione "Autenticazione").
+5. **Deploy**. Collega il **custom domain `vlsm.nicolocarello.it`** (Pages → Custom domains): è necessario perché l'SSO usa il cookie condiviso su `.nicolocarello.it`. Sull'URL `*.pages.dev` il login non funziona.
 
 Ogni push su `main` rilascia automaticamente in Production. I push sugli altri branch generano una preview URL.
 
@@ -134,8 +143,8 @@ L'app sincronizza automaticamente le verifiche degli studenti su un database SQL
    - Apri il database appena creato → tab **Console**
    - Copia il contenuto di `migrations/0001_init.sql` e clicca **Execute**
    - Poi `migrations/0002_settings.sql` e di nuovo **Execute** (aggiunge la
-     tabella `settings` per il pannello admin: toggle modalità verifica e
-     cambio password studente da UI).
+     tabella `settings` per il pannello admin: master-switch della modalità
+     verifica + audit log).
 
 3. **Collega il DB al progetto Pages**
    - Pages → progetto `vlsm` → **Settings** → **Functions** → sezione **D1 database bindings** → **Add binding**
@@ -143,29 +152,26 @@ L'app sincronizza automaticamente le verifiche degli studenti su un database SQL
    - D1 database: seleziona `vlsm-sessions`
    - Salva
 
-4. **Aggiungi le password server-side (Environment variables)**
+4. **Autenticazione: nessuna password da configurare**
    - Le funzioni server (`/api/session/*`, `/api/sessions/*`, `/api/admin/*`)
-     richiedono le stesse password che usi sul client, ma con nomi senza
-     prefisso `VITE_`:
-     - `APP_PASSWORD` (=valore di `VITE_APP_PASSWORD`) — fallback se non
-       hai mai impostato una password personalizzata dal pannello admin
-     - `ADMIN_PASSWORD` (=valore di `VITE_ADMIN_PASSWORD`)
-   - Tipo: **Secret** (criptate at rest)
+     autenticano via cookie SSO `nc_session` (vedi `functions/_lib/sso.ts`). Non
+     servono `APP_PASSWORD`/`ADMIN_PASSWORD`: gli endpoint studente verificano la
+     firma del cookie, quelli admin richiedono il flag **super-admin** sull'IdP.
+   - Assicurati che l'app sia sul custom domain `vlsm.nicolocarello.it`.
 
 5. **Forza un nuovo deploy**
    - Pages → Deployments → **Create deployment** (oppure pusha un commit)
 
-### Cambio password e toggle verifica da admin
+### Toggle verifica da admin
 
 In **Modalità docente** → tab **⚙️ Impostazioni** puoi:
-- **Attivare/disattivare la modalità verifica** in tempo reale: quando OFF
-  gli studenti vedono la sezione "Svolgi la verifica" disabilitata sulla
-  login (esercitazioni libere e accesso docente restano sempre attivi).
-- **Cambiare la password studente** senza redeploy: la nuova vale per i
-  nuovi login. Le sessioni già attive continuano a sincronizzare con la
-  vecchia password per **60 minuti** (grace period) per non disturbare
-  studenti che stanno svolgendo la verifica.
+- **Attivare/disattivare la modalità verifica** in tempo reale (master-switch
+  globale): quando OFF gli studenti vedono la sezione "Svolgi la verifica"
+  disabilitata (esercitazioni libere e accesso docente restano sempre attivi).
 - Consultare la **cronologia modifiche** (audit log con timestamp e IP).
+
+> Gli **utenti, le classi e le approvazioni** non si gestiscono più qui ma dalla
+> console super-admin dell'IdP: `https://auth.nicolocarello.it/admin`.
 
 **Cosa succede senza setup:**
 - L'app continua a funzionare su localStorage
@@ -189,7 +195,7 @@ src/
 │   └── pickVerifica.ts         # sorteggio uniforme
 ├── hooks/{useSession,useTimer}.ts
 ├── components/
-│   ├── screens/{Login,StudentInfo,Test,Review,Result}Screen.tsx
+│   ├── screens/{StudentInfo,Test,Review,Result}Screen.tsx + {Student,Admin}LoginGate.tsx (gate SSO)
 │   ├── exercises/EsercizioVlsmAlloc, EsercizioParametri, EsercizioAnalisiPiano
 │   ├── ui/{Header,Footer,TimerBadge}.tsx
 │   └── pdf/{PdfReport,PdfDownload}.tsx
@@ -202,14 +208,13 @@ Le **soluzioni attese** non sono memorizzate: vengono calcolate al volo dalla li
 
 - Le risposte attese si possono ricostruire da chiunque apra i sorgenti minificati. Mitigazione: supervisione del docente in laboratorio.
 - Il PDF non è firmato digitalmente: uno studente potrebbe rieditarlo prima di stamparlo. Stessa mitigazione.
-- La password compare in chiaro nel bundle JS dopo il build. Cambiare password = nuovo build/redeploy.
 - Una sessione = una tab. Aprire più tab dello stesso browser causa drift sullo storage.
 
 ## Sorgenti didattici
 
 ```
 docs/
-├── verifiche/           # verifiche ufficiali, accesso con password
+├── verifiche/           # verifiche ufficiali, accesso con login SSO
 │   ├── base/            # v1, v2, v7, v8
 │   ├── media/           # v3, v5, v10, v11
 │   ├── alta/            # v4, v9, v12, v13
@@ -228,11 +233,11 @@ Tutti i `.md` sono generati automaticamente da `scripts/generate-md.ts` (`npx ts
 
 L'app ha due modalità separate, accessibili dalla schermata iniziale.
 
-### Verifica ufficiale (con password)
-Lo studente inserisce la `VITE_APP_PASSWORD`, sceglie il livello dal menù a tendina e il sistema sorteggia una delle 4 verifiche di quel livello. Il PDF finale ha gli spazi per la firma studente/docente.
+### Verifica ufficiale (con login SSO)
+Lo studente accede con il proprio account (SSO). Servono account attivo e classe approvata dal docente; nome e classe arrivano dall'account. Sceglie il livello dal menù a tendina e il sistema sorteggia una delle 4 verifiche di quel livello. Il PDF finale ha gli spazi per la firma studente/docente.
 
-### Esercitazione libera (senza password)
-Pulsante "🎯 Modalità esercitazione" sulla schermata di login: nessuna password richiesta. Lo studente sceglie il livello e il sistema sorteggia una delle 2 simulazioni del livello. Il PDF mostra un banner "ESERCITAZIONE LIBERA — non vale come verifica ufficiale" e non ha gli spazi firma.
+### Esercitazione libera (senza login)
+Card "🎯 Esercitazione" sulla home: nessun login richiesto. Lo studente sceglie il livello e il sistema sorteggia una delle 2 simulazioni del livello. Il PDF mostra un banner "ESERCITAZIONE LIBERA — non vale come verifica ufficiale" e non ha gli spazi firma.
 
 ### Livelli di difficoltà
 

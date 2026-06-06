@@ -1,16 +1,19 @@
-import { jsonError, jsonOk, normalizeText, requireAuth, type SharedEnv } from '../../_lib/shared';
+import { jsonError, jsonOk, normalizeText, requireIdentity, type SharedEnv } from '../../_lib/shared';
 
 /**
- * GET /api/session/recover?nome=X&classe=Y
+ * GET /api/session/recover?classe=Y
  * Trova la sessione 'in_progress' più recente per (nome, classe).
+ * Il NOME è quello autenticato dall'SSO (non un parametro): un altro studente
+ * non può sondare le sessioni altrui. La classe arriva dal client (tra quelle
+ * approvate per l'utente).
  * Filtri: started_at nelle ultime 6 ore, deadline non scaduta da più di 1 ora.
  */
 export const onRequestGet: PagesFunction<SharedEnv> = async ({ request, env }) => {
-  const unauth = await requireAuth(request, env, 'student');
-  if (unauth) return unauth;
+  const identity = await requireIdentity(request);
+  if (identity instanceof Response) return identity;
 
   const url = new URL(request.url);
-  const nome = url.searchParams.get('nome') ?? '';
+  const nome = (identity.name && identity.name.trim()) || url.searchParams.get('nome') || '';
   const classe = url.searchParams.get('classe') ?? '';
   if (!nome || !classe) return jsonError(400, 'Parametri nome e classe obbligatori.');
 

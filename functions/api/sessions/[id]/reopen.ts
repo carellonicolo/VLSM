@@ -1,4 +1,4 @@
-import { jsonError, jsonOk, requireAuth, type SharedEnv } from '../../../_lib/shared';
+import { jsonError, jsonOk, requireSuperAdmin, type SharedEnv } from '../../../_lib/shared';
 
 interface ReopenBody {
   extendMinutes?: number;
@@ -10,8 +10,8 @@ interface ReopenBody {
  * Setta state='in_progress' su una sessione consegnata.
  */
 export const onRequestPost: PagesFunction<SharedEnv> = async ({ params, request, env }) => {
-  const unauth = await requireAuth(request, env, 'admin');
-  if (unauth) return unauth;
+  const auth = await requireSuperAdmin(request);
+  if (auth instanceof Response) return auth;
 
   const id = String(params.id ?? '');
   if (!id) return jsonError(400, 'id mancante.');

@@ -40,7 +40,9 @@ export function TestFlow({ categoria }: Props) {
   } = useSession();
   const { theme, toggle: toggleTheme } = useTheme();
   const navigate = useNavigate();
-  const [studentLogged, setStudentLogged] = useState(categoria === 'esercitazione');
+  // Auth SSO per la verifica ufficiale. Per l'esercitazione non serve login.
+  const [auth, setAuth] = useState<{ name: string; approvedClasses: string[] } | null>(null);
+  const studentLogged = categoria === 'esercitazione' || auth !== null;
 
   const themeToggle = (
     <>
@@ -165,12 +167,12 @@ export function TestFlow({ categoria }: Props) {
     }
   }, [session.phase, session.deadlineMs, submit]);
 
-  // Gate password per la modalità verifica.
-  if (categoria === 'verifica' && !studentLogged && session.phase !== 'result') {
+  // Gate SSO per la modalità verifica.
+  if (categoria === 'verifica' && !auth && session.phase !== 'result') {
     return (
       <div className="shell">
         <Header actions={themeToggle} />
-        <StudentLoginGate onSuccess={() => setStudentLogged(true)} />
+        <StudentLoginGate onAuthenticated={setAuth} />
         <Footer />
       </div>
     );
@@ -186,6 +188,8 @@ export function TestFlow({ categoria }: Props) {
         <StudentInfoScreen
           durataMin={session.durataMin}
           categoria={categoria}
+          lockedNome={categoria === 'verifica' ? auth?.name : undefined}
+          approvedClasses={categoria === 'verifica' ? auth?.approvedClasses : undefined}
           onStart={(s, v, d) => startTest(s, v, d)}
           onResume={handleResume}
         />

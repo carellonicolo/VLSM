@@ -172,9 +172,8 @@ export function SessionsLive({ active }: Props) {
           <div className="error-msg" style={{ marginTop: '0.75rem' }}>
             <strong>Cloud non disponibile:</strong> {lastError}
             <div style={{ fontSize: '0.85rem', marginTop: '0.25rem' }}>
-              Verifica che il binding D1 sia configurato sul progetto Pages e che le password
-              VITE_APP_PASSWORD / VITE_ADMIN_PASSWORD siano impostate anche come APP_PASSWORD / ADMIN_PASSWORD
-              (env variabili server-side).
+              Verifica che il binding D1 sia configurato sul progetto Pages e che la tua sessione
+              docente (super-admin SSO) sia ancora valida. Se necessario esci e accedi di nuovo.
             </div>
           </div>
         )}

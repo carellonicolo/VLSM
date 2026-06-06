@@ -1,4 +1,4 @@
-import { jsonError, jsonOk, requireAuth, type SharedEnv } from '../../_lib/shared';
+import { jsonError, jsonOk, requireSuperAdmin, type SharedEnv } from '../../_lib/shared';
 import { setSetting } from '../../_lib/settings';
 
 interface Body { enabled?: boolean }
@@ -6,11 +6,11 @@ interface Body { enabled?: boolean }
 /**
  * PUT /api/admin/verifica-enabled — abilita o disabilita la modalità verifica.
  * Body: { enabled: boolean }
- * Solo password docente.
+ * Solo docente (super-admin SSO).
  */
 export const onRequestPut: PagesFunction<SharedEnv> = async ({ request, env }) => {
-  const unauth = await requireAuth(request, env, 'admin');
-  if (unauth) return unauth;
+  const auth = await requireSuperAdmin(request);
+  if (auth instanceof Response) return auth;
 
   let body: Body;
   try { body = (await request.json()) as Body; } catch { return jsonError(400, 'JSON non valido.'); }

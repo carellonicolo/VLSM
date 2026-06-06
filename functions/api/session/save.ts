@@ -1,4 +1,4 @@
-import { jsonError, jsonOk, normalizeText, requireAuth, sessionIdFor, type SharedEnv } from '../../_lib/shared';
+import { jsonError, jsonOk, normalizeText, requireIdentity, sessionIdFor, type SharedEnv } from '../../_lib/shared';
 import { getVerificaEnabled } from '../../_lib/settings';
 
 interface SavePayload {
@@ -24,8 +24,8 @@ interface SavePayload {
 }
 
 export const onRequestPost: PagesFunction<SharedEnv> = async ({ request, env }) => {
-  const unauth = await requireAuth(request, env, 'student');
-  if (unauth) return unauth;
+  const identity = await requireIdentity(request);
+  if (identity instanceof Response) return identity;
 
   let body: SavePayload;
   try {
@@ -33,9 +33,14 @@ export const onRequestPost: PagesFunction<SharedEnv> = async ({ request, env }) 
   } catch {
     return jsonError(400, 'JSON non valido.');
   }
-  if (!body || !body.studente?.nome || !body.studente?.classe || !body.verificaId || !body.startedAt) {
+  if (!body || !body.studente?.classe || !body.verificaId || !body.startedAt) {
     return jsonError(400, 'Campi obbligatori mancanti.');
   }
+
+  // Il NOME ufficiale è quello autenticato dall'SSO (non quello del payload):
+  // garantisce che la verifica firmata porti l'identità reale dello studente.
+  const nome = (identity.name && identity.name.trim()) || body.studente.nome || '';
+  if (!nome) return jsonError(400, 'Identità senza nome: impossibile salvare.');
 
   // Se la modalità verifica è disabilitata, blocchiamo solo le NUOVE verifiche
   // (state='in_progress' senza esito precedente). Le sessioni esistenti possono
@@ -43,7 +48,7 @@ export const onRequestPost: PagesFunction<SharedEnv> = async ({ request, env }) 
   if (body.categoria === 'verifica' && body.state === 'in_progress') {
     const enabled = await getVerificaEnabled(env);
     if (!enabled) {
-      const id = await sessionIdFor(body.studente.nome, body.studente.classe, body.startedAt);
+      const id = await sessionIdFor(nome, body.studente.classe, body.startedAt);
       const existing = await env.DB.prepare(`SELECT id FROM sessions WHERE id = ?`).bind(id).first();
       if (!existing) {
         return jsonError(403, 'Modalità verifica disattivata dal docente.');
@@ -51,8 +56,8 @@ export const onRequestPost: PagesFunction<SharedEnv> = async ({ request, env }) 
     }
   }
 
-  const id = await sessionIdFor(body.studente.nome, body.studente.classe, body.startedAt);
-  const nameNorm = normalizeText(body.studente.nome);
+  const id = await sessionIdFor(nome, body.studente.classe, body.startedAt);
+  const nameNorm = normalizeText(nome);
   const classNorm = normalizeText(body.studente.classe);
   const updatedAt = new Date().toISOString();
   const clientIp = request.headers.get('cf-connecting-ip') ?? '';
@@ -87,7 +92,7 @@ export const onRequestPost: PagesFunction<SharedEnv> = async ({ request, env }) 
     )
       .bind(
         id,
-        body.studente.nome,
+        nome,
         nameNorm,
         body.studente.classe,
         classNorm,

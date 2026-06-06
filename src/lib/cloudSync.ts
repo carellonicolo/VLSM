@@ -38,16 +38,14 @@ export interface RecoverableSession {
   previousClientUserAgent?: string | null;
 }
 
-const STUDENT_PASSWORD = import.meta.env.VITE_APP_PASSWORD ?? 'vlsm2026';
-const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD ?? 'docente2026';
-
-async function api(path: string, init: RequestInit, role: 'student' | 'admin' = 'student'): Promise<Response> {
+// Autenticazione via SSO: il cookie condiviso `nc_session` viaggia da solo.
+// `credentials: 'include'` lo allega anche se in futuro le API fossero cross-origin.
+async function api(path: string, init: RequestInit): Promise<Response> {
   const headers = new Headers(init.headers);
-  headers.set('x-vlsm-auth', role === 'admin' ? ADMIN_PASSWORD : STUDENT_PASSWORD);
   if (init.body && !headers.has('content-type')) {
     headers.set('content-type', 'application/json');
   }
-  return fetch(path, { ...init, headers });
+  return fetch(path, { ...init, headers, credentials: 'include' });
 }
 
 const SAVE_TIMEOUT_MS = 7000;
@@ -117,7 +115,7 @@ export interface CloudSessionRow {
 export async function cloudListSessions(state?: string): Promise<{ ok: boolean; sessions: CloudSessionRow[]; error?: string }> {
   try {
     const url = state && state !== 'all' ? `/api/sessions/list?state=${encodeURIComponent(state)}` : '/api/sessions/list';
-    const res = await api(url, { method: 'GET' }, 'admin');
+    const res = await api(url, { method: 'GET' });
     if (!res.ok) {
       const body = await res.text().catch(() => '');
       return { ok: false, sessions: [], error: `HTTP ${res.status}: ${body.slice(0, 200)}` };
@@ -154,7 +152,7 @@ export interface CloudSessionDetail {
 
 export async function cloudGetSession(id: string): Promise<{ ok: boolean; session?: CloudSessionDetail; error?: string }> {
   try {
-    const res = await api(`/api/sessions/${encodeURIComponent(id)}`, { method: 'GET' }, 'admin');
+    const res = await api(`/api/sessions/${encodeURIComponent(id)}`, { method: 'GET' });
     if (!res.ok) {
       const body = await res.text().catch(() => '');
       return { ok: false, error: `HTTP ${res.status}: ${body.slice(0, 200)}` };
@@ -171,7 +169,7 @@ export async function cloudReopenSession(id: string, extendMinutes = 15): Promis
     const res = await api(`/api/sessions/${encodeURIComponent(id)}/reopen`, {
       method: 'POST',
       body: JSON.stringify({ extendMinutes }),
-    }, 'admin');
+    });
     if (!res.ok) {
       const body = await res.text().catch(() => '');
       return { ok: false, error: `HTTP ${res.status}: ${body.slice(0, 200)}` };
@@ -182,7 +180,9 @@ export async function cloudReopenSession(id: string, extendMinutes = 15): Promis
   }
 }
 
-// ====== Auth + Settings (runtime config dal DB) ======
+// ====== Settings (runtime config dal DB) ======
+// L'autenticazione è gestita dall'SSO (vedi src/lib/auth.ts): qui restano solo
+// le impostazioni applicative.
 
 export interface PublicConfig { verificaEnabled: boolean }
 
@@ -197,34 +197,13 @@ export async function cloudGetConfig(): Promise<PublicConfig> {
   }
 }
 
-export interface StudentLoginResult { ok: boolean; status: number; error?: string }
-
-export async function cloudLoginStudent(password: string): Promise<StudentLoginResult> {
-  try {
-    const res = await fetch('/api/auth/login-student', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ password }),
-    });
-    if (res.ok) return { ok: true, status: res.status };
-    const body = (await res.json().catch(() => ({}))) as { error?: string };
-    return { ok: false, status: res.status, error: body.error };
-  } catch (e) {
-    return { ok: false, status: 0, error: e instanceof Error ? e.message : String(e) };
-  }
-}
-
 export interface AdminSettings {
   verificaEnabled: boolean;
-  studentPasswordSet: boolean;
-  studentPasswordChangedAt: string;
-  gracePeriodValid: boolean;
-  gracePeriodEndsAt: string;
 }
 
 export async function cloudGetAdminSettings(): Promise<{ ok: boolean; settings?: AdminSettings; error?: string }> {
   try {
-    const res = await api('/api/admin/settings', { method: 'GET' }, 'admin');
+    const res = await api('/api/admin/settings', { method: 'GET' });
     if (!res.ok) {
       const body = await res.text().catch(() => '');
       return { ok: false, error: `HTTP ${res.status}: ${body.slice(0, 200)}` };
@@ -241,28 +220,10 @@ export async function cloudSetVerificaEnabled(enabled: boolean): Promise<{ ok: b
     const res = await api('/api/admin/verifica-enabled', {
       method: 'PUT',
       body: JSON.stringify({ enabled }),
-    }, 'admin');
+    });
     if (!res.ok) {
       const body = await res.text().catch(() => '');
       return { ok: false, error: `HTTP ${res.status}: ${body.slice(0, 200)}` };
-    }
-    return { ok: true };
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) };
-  }
-}
-
-export async function cloudChangeStudentPassword(newPassword: string): Promise<{ ok: boolean; error?: string }> {
-  try {
-    const res = await api('/api/admin/student-password', {
-      method: 'POST',
-      body: JSON.stringify({ newPassword }),
-    }, 'admin');
-    if (!res.ok) {
-      const body = await res.text().catch(() => '');
-      let msg = `HTTP ${res.status}`;
-      try { const parsed = JSON.parse(body); if (parsed?.error) msg = parsed.error; } catch { /* ignore */ }
-      return { ok: false, error: msg };
     }
     return { ok: true };
   } catch (e) {
@@ -283,7 +244,7 @@ export interface AuditEntry {
 
 export async function cloudGetAuditLog(): Promise<{ ok: boolean; entries: AuditEntry[]; error?: string }> {
   try {
-    const res = await api('/api/admin/audit', { method: 'GET' }, 'admin');
+    const res = await api('/api/admin/audit', { method: 'GET' });
     if (!res.ok) {
       const body = await res.text().catch(() => '');
       return { ok: false, entries: [], error: `HTTP ${res.status}: ${body.slice(0, 200)}` };
@@ -297,7 +258,7 @@ export async function cloudGetAuditLog(): Promise<{ ok: boolean; entries: AuditE
 
 export async function cloudDeleteSession(id: string): Promise<{ ok: boolean; error?: string }> {
   try {
-    const res = await api(`/api/sessions/${encodeURIComponent(id)}`, { method: 'DELETE' }, 'admin');
+    const res = await api(`/api/sessions/${encodeURIComponent(id)}`, { method: 'DELETE' });
     if (!res.ok) {
       const body = await res.text().catch(() => '');
       return { ok: false, error: `HTTP ${res.status}: ${body.slice(0, 200)}` };

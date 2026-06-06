@@ -1,12 +1,12 @@
-import { jsonError, jsonOk, requireAuth, type SharedEnv } from '../../_lib/shared';
+import { jsonError, jsonOk, requireSuperAdmin, type SharedEnv } from '../../_lib/shared';
 
 /**
  * GET /api/admin/audit?limit=100 — log delle modifiche settings.
- * Solo password docente.
+ * Solo docente (super-admin SSO).
  */
 export const onRequestGet: PagesFunction<SharedEnv> = async ({ request, env }) => {
-  const unauth = await requireAuth(request, env, 'admin');
-  if (unauth) return unauth;
+  const auth = await requireSuperAdmin(request);
+  if (auth instanceof Response) return auth;
 
   const url = new URL(request.url);
   const limit = Math.min(500, Math.max(1, Number(url.searchParams.get('limit') ?? '100')));

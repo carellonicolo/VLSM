@@ -9,6 +9,10 @@ import { RecoverModal } from './RecoverModal';
 interface Props {
   durataMin: number;
   categoria: Categoria;
+  /** Nome autenticato via SSO (verifica ufficiale): bloccato, non modificabile. */
+  lockedNome?: string;
+  /** Classi approvate dal docente per l'utente loggato (verifica ufficiale). */
+  approvedClasses?: string[];
   onStart: (studente: DatiStudente, verificaId: VerificaId, durataMin: number) => void;
   onResume: (sessione: RecoverableSession) => void;
 }
@@ -16,12 +20,17 @@ interface Props {
 const RAW_DURATA = Number(import.meta.env.VITE_DURATA_DEFAULT_MIN ?? '0');
 const DURATA_BLOCCATA_VERIFICA = Number.isFinite(RAW_DURATA) && RAW_DURATA > 0 ? RAW_DURATA : null;
 
-export function StudentInfoScreen({ durataMin, categoria, onStart, onResume }: Props) {
+export function StudentInfoScreen({ durataMin, categoria, lockedNome, approvedClasses, onStart, onResume }: Props) {
   const isEsercitazione = categoria === 'esercitazione';
   const durataBloccata = isEsercitazione ? null : DURATA_BLOCCATA_VERIFICA;
 
-  const [nome, setNome] = useState('');
-  const [classe, setClasse] = useState('');
+  // In verifica nome e classe arrivano dall'SSO: nome bloccato, classe scelta
+  // tra quelle approvate dal docente.
+  const nomeBloccato = !!lockedNome;
+  const classiApprovate = approvedClasses ?? [];
+
+  const [nome, setNome] = useState(lockedNome ?? '');
+  const [classe, setClasse] = useState(classiApprovate.length > 0 ? classiApprovate[0] : '');
   const [durata, setDurata] = useState(durataBloccata ?? durataMin);
   const [difficolta, setDifficolta] = useState<Difficolta>('Base');
   const [checkingRecover, setCheckingRecover] = useState(false);
@@ -78,14 +87,43 @@ export function StudentInfoScreen({ durataMin, categoria, onStart, onResume }: P
           </p>
         </div>
       )}
+      {nomeBloccato && (
+        <p className="muted" style={{ marginTop: 0 }}>
+          Accesso effettuato come <strong>{nome}</strong>. Nome e classe provengono dal tuo
+          account e non sono modificabili.
+        </p>
+      )}
       <div className="field-row">
         <div className="field">
           <label htmlFor="nome">Nome e cognome</label>
-          <input id="nome" type="text" value={nome} onChange={(e) => setNome(e.target.value)} autoFocus />
+          <input
+            id="nome"
+            type="text"
+            value={nome}
+            onChange={(e) => setNome(e.target.value)}
+            autoFocus={!nomeBloccato}
+            readOnly={nomeBloccato}
+            disabled={nomeBloccato}
+          />
         </div>
         <div className="field">
           <label htmlFor="classe">Classe</label>
-          <input id="classe" type="text" value={classe} onChange={(e) => setClasse(e.target.value)} placeholder="es. 5A SRI" />
+          {classiApprovate.length > 1 ? (
+            <select
+              id="classe"
+              value={classe}
+              onChange={(e) => setClasse(e.target.value)}
+              style={{ width: '100%', padding: '0.5rem 0.7rem', border: '1px solid var(--border)', borderRadius: 5, fontSize: '0.95rem', fontFamily: 'inherit', background: 'white' }}
+            >
+              {classiApprovate.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          ) : classiApprovate.length === 1 ? (
+            <input id="classe" type="text" value={classe} readOnly disabled />
+          ) : (
+            <input id="classe" type="text" value={classe} onChange={(e) => setClasse(e.target.value)} placeholder="es. 5A SRI" />
+          )}
         </div>
       </div>
       <div className="field-row">

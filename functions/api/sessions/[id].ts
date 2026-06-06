@@ -1,15 +1,15 @@
-import { jsonError, jsonOk, requireAuth, type SharedEnv } from '../../_lib/shared';
+import { jsonError, jsonOk, requireSuperAdmin, type SharedEnv } from '../../_lib/shared';
 
 /**
  * GET    /api/sessions/:id        → dettaglio
  * POST   /api/sessions/:id/reopen → torna a in_progress, estende la deadline
  * DELETE /api/sessions/:id        → cancella riga (cleanup manuale)
  *
- * Solo password docente.
+ * Solo docente (super-admin SSO).
  */
 export const onRequestGet: PagesFunction<SharedEnv> = async ({ params, request, env }) => {
-  const unauth = await requireAuth(request, env, 'admin');
-  if (unauth) return unauth;
+  const auth = await requireSuperAdmin(request);
+  if (auth instanceof Response) return auth;
 
   const id = String(params.id ?? '');
   if (!id) return jsonError(400, 'id mancante.');
@@ -34,8 +34,8 @@ export const onRequestGet: PagesFunction<SharedEnv> = async ({ params, request, 
 };
 
 export const onRequestDelete: PagesFunction<SharedEnv> = async ({ params, request, env }) => {
-  const unauth = await requireAuth(request, env, 'admin');
-  if (unauth) return unauth;
+  const auth = await requireSuperAdmin(request);
+  if (auth instanceof Response) return auth;
 
   const id = String(params.id ?? '');
   if (!id) return jsonError(400, 'id mancante.');

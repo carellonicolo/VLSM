@@ -44,7 +44,7 @@ export function HomePage() {
             <h3 className="landing-card-title">Verifica</h3>
             <p className="landing-card-text">
               Modalità ufficiale con timer, correzione automatica e PDF firmato.
-              Richiede la password dello studente.
+              Richiede l'accesso con il tuo account scolastico.
             </p>
             <span className="landing-card-cta">Inizia la verifica →</span>
           </Link>
@@ -64,7 +64,7 @@ export function HomePage() {
             <h3 className="landing-card-title">Modalità docente</h3>
             <p className="landing-card-text">
               Correzione bulk, gestione sessioni live e impostazioni.
-              Riservata al docente (password dedicata).
+              Riservata al docente (accesso SSO super-admin).
             </p>
             <span className="landing-card-cta">Area docente →</span>
           </Link>

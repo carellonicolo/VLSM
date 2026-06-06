@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { parseMultiple, toCsv, downloadCsv, type ParsedFile } from '../../lib/pdfBulk';
 import type { VerifyStatus } from '../../lib/pdfSign';
+import { redirectToLogout } from '../../lib/auth';
 import { SessionsLive } from './SessionsLive';
 import { SettingsTab } from './SettingsTab';
 
@@ -124,7 +125,10 @@ export function AdminScreen({ onExit }: Props) {
     <>
       <div className="test-header-bar">
         <h2 style={{ margin: 0 }}>📊 Modalità docente</h2>
-        <button className="btn btn-secondary" type="button" onClick={onExit}>Esci</button>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <button className="btn btn-secondary" type="button" onClick={onExit}>← Home</button>
+          <button className="btn btn-secondary" type="button" onClick={redirectToLogout}>🚪 Esci dall'account</button>
+        </div>
       </div>
 
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
