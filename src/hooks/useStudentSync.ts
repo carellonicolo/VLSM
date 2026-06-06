@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Categoria, EsitoFinale, EventoFocus, RispostaStudente } from '../types/domain';
-import { cloudSave, getOrCreateClientId, type CloudSessionPayload } from '../lib/cloudSync';
+import { getOrCreateClientId } from '../lib/cloudSync';
+import { studentSaveSession, type StudentSavePayload } from '../lib/studentApi';
 
 export type SyncStatus = 'idle' | 'syncing' | 'synced' | 'offline' | 'error';
 
-interface UseCloudSyncOptions {
+interface UseStudentSyncOptions {
   enabled: boolean;
-  studente: { nome: string; classe: string } | undefined;
   categoria: Categoria;
   verificaId: string | undefined;
   verificaTitolo: string | undefined;
@@ -18,17 +18,19 @@ interface UseCloudSyncOptions {
   eventiFocus: EventoFocus[];
   state: 'in_progress' | 'consegnata' | 'abbandonata';
   esito?: EsitoFinale;
+  /** Chiamata quando il server segnala che la prova è stata annullata dal docente. */
+  onAnnullata?: () => void;
 }
 
-const DEBOUNCE_MS = 1500;     // attende 1.5s di idle prima di salvare
-const HEARTBEAT_MS = 30_000;  // forza save almeno ogni 30s anche senza cambi
+const DEBOUNCE_MS = 1500;
+const HEARTBEAT_MS = 30_000;
 
 /**
- * Sincronizza la sessione corrente con il server.
- * Strategia: debounce 1.5s + heartbeat 30s + retry esponenziale soft in caso di errore.
- * Mantiene `lastSyncAt` e `status` per UI.
+ * Sincronizza la sessione dello studente loggato col server (token-based).
+ * Debounce 1.5s + heartbeat 30s. Se il server risponde 409 'annullata',
+ * interrompe il sync e notifica via onAnnullata.
  */
-export function useCloudSync(opts: UseCloudSyncOptions) {
+export function useStudentSync(opts: UseStudentSyncOptions) {
   const [status, setStatus] = useState<SyncStatus>('idle');
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
   const [lastError, setLastError] = useState<string | null>(null);
@@ -37,19 +39,13 @@ export function useCloudSync(opts: UseCloudSyncOptions) {
   const heartbeatTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const inFlight = useRef(false);
   const pending = useRef(false);
+  const stopped = useRef(false);
+  const onAnnullataRef = useRef(opts.onAnnullata);
+  onAnnullataRef.current = opts.onAnnullata;
 
-  // Costruisce il payload corrente. Se mancano dati essenziali → null.
-  const payload: CloudSessionPayload | null =
-    opts.enabled &&
-    opts.studente &&
-    opts.verificaId &&
-    opts.verificaTitolo &&
-    opts.startedAt &&
-    opts.deadlineAt &&
-    opts.answers
+  const payload: StudentSavePayload | null =
+    opts.enabled && opts.verificaId && opts.verificaTitolo && opts.startedAt && opts.deadlineAt && opts.answers
       ? {
-          clientId: getOrCreateClientId(),
-          studente: opts.studente,
           categoria: opts.categoria,
           verificaId: opts.verificaId,
           verificaTitolo: opts.verificaTitolo,
@@ -66,58 +62,58 @@ export function useCloudSync(opts: UseCloudSyncOptions) {
           signedAt: opts.esito?.signedAt,
           consegnatoAt: opts.esito?.consegnatoAt,
           motivoConsegna: opts.esito?.motivoConsegna,
+          clientId: getOrCreateClientId(),
         }
       : null;
 
-  // Riferimento stabile al payload più recente
-  const latestPayload = useRef<CloudSessionPayload | null>(payload);
+  const latestPayload = useRef<StudentSavePayload | null>(payload);
   latestPayload.current = payload;
 
   const doSave = async () => {
-    if (!latestPayload.current) return;
+    if (stopped.current || !latestPayload.current) return;
     if (inFlight.current) {
       pending.current = true;
       return;
     }
     inFlight.current = true;
     setStatus('syncing');
-    const res = await cloudSave(latestPayload.current);
+    const res = await studentSaveSession(latestPayload.current);
     inFlight.current = false;
     if (res.ok) {
       setStatus('synced');
       setLastSyncAt(res.updatedAt ?? new Date().toISOString());
       setLastError(null);
+    } else if (res.annullata) {
+      stopped.current = true;
+      setStatus('error');
+      setLastError('Prova annullata dal docente.');
+      onAnnullataRef.current?.();
+      return;
     } else {
       const msg = res.error ?? 'errore sconosciuto';
       setLastError(msg);
-      // Heuristic: 5xx/network/timeout → offline; altrimenti error
-      setStatus(/HTTP 5|aborted|Failed to fetch|NetworkError|abort/i.test(msg) ? 'offline' : 'error');
+      setStatus(/HTTP 5|aborted|Failed to fetch|NetworkError|abort|timeout/i.test(msg) ? 'offline' : 'error');
     }
     if (pending.current) {
       pending.current = false;
-      // Coalescenza: subito un altro save con i dati più recenti
-      doSave();
+      void doSave();
     }
   };
 
-  // Debounce sui cambi: ogni volta che payload cambia, schedula save dopo 1.5s
   useEffect(() => {
-    if (!payload) return;
+    if (!payload || stopped.current) return;
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    debounceTimer.current = setTimeout(() => {
-      void doSave();
-    }, DEBOUNCE_MS);
+    debounceTimer.current = setTimeout(() => void doSave(), DEBOUNCE_MS);
     return () => {
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(payload)]);
 
-  // Heartbeat: forza save periodico anche se nulla cambia
   useEffect(() => {
     if (!opts.enabled) return;
     heartbeatTimer.current = setInterval(() => {
-      if (latestPayload.current) void doSave();
+      if (latestPayload.current && !stopped.current) void doSave();
     }, HEARTBEAT_MS);
     return () => {
       if (heartbeatTimer.current) clearInterval(heartbeatTimer.current);
@@ -125,13 +121,11 @@ export function useCloudSync(opts: UseCloudSyncOptions) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [opts.enabled]);
 
-  // Forza un save all'avvio (e quando si abilita)
   useEffect(() => {
-    if (opts.enabled && payload) void doSave();
+    if (opts.enabled && payload && !stopped.current) void doSave();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [opts.enabled]);
 
-  // Save finale alla terminazione (su consegna)
   const flush = async () => {
     if (debounceTimer.current) {
       clearTimeout(debounceTimer.current);

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   cloudDeleteSession,
   cloudGetSession,
+  cloudIntervene,
   cloudListSessions,
   cloudReopenSession,
   type CloudSessionRow,
@@ -9,6 +10,8 @@ import {
 import { formatDuration, formatTimeOfDay } from '../../lib/format';
 import { getVerifica } from '../../data/verifiche';
 import { gradeVerifica } from '../../lib/grading';
+import { useToast } from '../ui/Toast';
+import { useConfirm } from '../ui/Confirm';
 import type { EsitoFinale, MotivoConsegna, RispostaStudente } from '../../types/domain';
 
 const REFRESH_MS = 5000;
@@ -27,6 +30,7 @@ function relativeTime(iso: string | null): string {
 
 function activityState(row: CloudSessionRow): { color: string; label: string } {
   if (row.state === 'consegnata') return { color: 'var(--success)', label: '✅ Consegnata' };
+  if (row.state === 'annullata') return { color: 'var(--error)', label: '⛔ Annullata' };
   if (row.state === 'abbandonata') return { color: 'var(--muted)', label: '⚪ Abbandonata' };
   const diffMin = (Date.now() - new Date(row.updated_at).getTime()) / 60000;
   if (diffMin < 1) return { color: 'var(--success)', label: '🟢 Attiva' };
@@ -35,11 +39,14 @@ function activityState(row: CloudSessionRow): { color: string; label: string } {
 }
 
 export function SessionsLive({ active }: Props) {
+  const toast = useToast();
+  const confirm = useConfirm();
   const [rows, setRows] = useState<CloudSessionRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
-  const [stateFilter, setStateFilter] = useState<'all' | 'in_progress' | 'consegnata' | 'abbandonata'>('in_progress');
+  const [stateFilter, setStateFilter] = useState<'all' | 'in_progress' | 'consegnata' | 'abbandonata' | 'annullata'>('in_progress');
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [intervene, setIntervene] = useState<{ row: CloudSessionRow; type: 'alert' | 'ammonizione' | 'annulla' } | null>(null);
   const [, force] = useState(0);
 
   const reload = useCallback(async () => {
@@ -69,21 +76,45 @@ export function SessionsLive({ active }: Props) {
   const filtered = useMemo(() => rows, [rows]);
 
   const onReopen = async (id: string) => {
-    if (!confirm("Riaprire questa verifica? Tornerà 'in_progress' con +15 minuti di tempo.")) return;
+    if (!(await confirm({ title: 'Riaprire la verifica?', message: "Tornerà 'in corso' con +15 minuti di tempo.", confirmLabel: 'Riapri' }))) return;
     setBusyId(id);
     const res = await cloudReopenSession(id, 15);
     setBusyId(null);
-    if (res.ok) void reload();
-    else alert(`Errore: ${res.error}`);
+    if (res.ok) {
+      toast('Verifica riaperta (+15 min).', 'success');
+      void reload();
+    } else {
+      toast(`Errore: ${res.error}`, 'error');
+    }
   };
 
   const onDelete = async (id: string) => {
-    if (!confirm('Eliminare questa sessione dal database cloud? Operazione irreversibile.')) return;
+    if (!(await confirm({ title: 'Eliminare la sessione?', message: 'Operazione irreversibile: la sessione verrà rimossa dal database cloud.', confirmLabel: 'Elimina', danger: true }))) return;
     setBusyId(id);
     const res = await cloudDeleteSession(id);
     setBusyId(null);
-    if (res.ok) void reload();
-    else alert(`Errore: ${res.error}`);
+    if (res.ok) {
+      toast('Sessione eliminata.', 'success');
+      void reload();
+    } else {
+      toast(`Errore: ${res.error}`, 'error');
+    }
+  };
+
+  const doIntervene = async (message: string) => {
+    if (!intervene) return;
+    const { row, type } = intervene;
+    setBusyId(row.id);
+    const res = await cloudIntervene(row.id, type, message);
+    setBusyId(null);
+    setIntervene(null);
+    if (res.ok) {
+      const label = type === 'annulla' ? 'Prova annullata.' : type === 'ammonizione' ? 'Ammonizione registrata.' : 'Alert inviato.';
+      toast(label, 'success');
+      void reload();
+    } else {
+      toast(`Errore: ${res.error}`, 'error');
+    }
   };
 
   const onDownloadPdf = async (id: string) => {
@@ -91,7 +122,7 @@ export function SessionsLive({ active }: Props) {
     try {
       const res = await cloudGetSession(id);
       if (!res.ok || !res.session) {
-        alert(`Errore: ${res.error ?? 'sessione non trovata'}`);
+        toast(`Errore: ${res.error ?? 'sessione non trovata'}`, 'error');
         return;
       }
       const s = res.session;
@@ -104,7 +135,7 @@ export function SessionsLive({ active }: Props) {
       } else {
         const verifica = getVerifica(s.verifica_id);
         if (!verifica) {
-          alert('Errore: verifica non trovata nel dataset locale.');
+          toast('Errore: verifica non trovata nel dataset locale.', 'error');
           return;
         }
         const startedAt = new Date(s.started_at);
@@ -136,7 +167,7 @@ export function SessionsLive({ active }: Props) {
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (e) {
-      alert(`Errore generazione PDF: ${e instanceof Error ? e.message : String(e)}`);
+      toast(`Errore generazione PDF: ${e instanceof Error ? e.message : String(e)}`, 'error');
     } finally {
       setBusyId(null);
     }
@@ -160,6 +191,7 @@ export function SessionsLive({ active }: Props) {
             >
               <option value="in_progress">In corso</option>
               <option value="consegnata">Consegnate</option>
+              <option value="annullata">Annullate</option>
               <option value="abbandonata">Abbandonate</option>
               <option value="all">Tutte</option>
             </select>
@@ -198,6 +230,7 @@ export function SessionsLive({ active }: Props) {
                   <th>Iniziata</th>
                   <th>Ultimo save</th>
                   <th>Distrazioni</th>
+                  <th>Ammon.</th>
                   <th>Voto</th>
                   <th>Firma</th>
                   <th>Azioni</th>
@@ -208,8 +241,12 @@ export function SessionsLive({ active }: Props) {
                   const act = activityState(r);
                   return (
                     <tr key={r.id}>
-                      <td style={{ color: act.color, fontWeight: 600, whiteSpace: 'nowrap' }}>{act.label}</td>
-                      <td>{r.student_name}</td>
+                      <td style={{ color: act.color, fontWeight: 600, whiteSpace: 'nowrap' }} title={r.state === 'annullata' && r.annullata_motivo ? `Motivo: ${r.annullata_motivo}` : undefined}>{act.label}</td>
+                      <td>
+                        {r.student_name}
+                        {r.student_email && <div className="muted" style={{ fontSize: '0.72rem' }}>{r.student_email}</div>}
+                        {!r.student_id && <div className="muted" style={{ fontSize: '0.7rem', fontStyle: 'italic' }}>legacy</div>}
+                      </td>
                       <td>{r.student_class}</td>
                       <td>{r.verifica_titolo}{r.difficolta ? ` (${r.difficolta})` : ''}</td>
                       <td title={new Date(r.started_at).toLocaleString('it-IT')}>{formatTimeOfDay(r.started_at)}</td>
@@ -219,9 +256,48 @@ export function SessionsLive({ active }: Props) {
                           ? <span style={{ color: 'var(--error)', fontWeight: 600 }}>⚠ {r.distrazioni_count}</span>
                           : <span style={{ color: 'var(--success)' }}>✓ 0</span>}
                       </td>
+                      <td>
+                        {r.ammonizioni_count > 0
+                          ? <span style={{ color: 'var(--error)', fontWeight: 700 }}>⚠ {r.ammonizioni_count}</span>
+                          : '—'}
+                      </td>
                       <td><strong>{r.voto30 != null ? `${r.voto30}/30` : '—'}</strong></td>
                       <td>{r.signed ? '✅' : '—'}</td>
                       <td style={{ whiteSpace: 'nowrap' }}>
+                        {r.state === 'in_progress' && r.categoria === 'verifica' && (
+                          <>
+                            <button
+                              className="btn-secondary btn"
+                              type="button"
+                              style={{ fontSize: '0.75rem', padding: '0.25rem 0.45rem', marginRight: '0.25rem' }}
+                              disabled={busyId === r.id}
+                              onClick={() => setIntervene({ row: r, type: 'alert' })}
+                              title="Invia un messaggio momentaneo allo studente"
+                            >
+                              ✉️ Alert
+                            </button>
+                            <button
+                              className="btn-secondary btn"
+                              type="button"
+                              style={{ fontSize: '0.75rem', padding: '0.25rem 0.45rem', marginRight: '0.25rem' }}
+                              disabled={busyId === r.id}
+                              onClick={() => setIntervene({ row: r, type: 'ammonizione' })}
+                              title="Registra un'ammonizione (compare sul resoconto)"
+                            >
+                              ⚠️ Ammonisci
+                            </button>
+                            <button
+                              className="btn"
+                              type="button"
+                              style={{ fontSize: '0.75rem', padding: '0.25rem 0.45rem', marginRight: '0.25rem', background: 'var(--error)', borderColor: 'var(--error)' }}
+                              disabled={busyId === r.id}
+                              onClick={() => setIntervene({ row: r, type: 'annulla' })}
+                              title="Interrompi e annulla la prova"
+                            >
+                              ⛔ Annulla
+                            </button>
+                          </>
+                        )}
                         <button
                           className="btn"
                           type="button"
@@ -232,7 +308,7 @@ export function SessionsLive({ active }: Props) {
                         >
                           📄 PDF
                         </button>
-                        {r.state === 'consegnata' && (
+                        {(r.state === 'consegnata' || r.state === 'annullata') && (
                           <button
                             className="btn-secondary btn"
                             type="button"
@@ -261,6 +337,103 @@ export function SessionsLive({ active }: Props) {
           </div>
         </div>
       )}
+
+      {intervene && (
+        <InterveneModal
+          studentName={intervene.row.student_name}
+          type={intervene.type}
+          busy={busyId === intervene.row.id}
+          onClose={() => setIntervene(null)}
+          onConfirm={(msg) => void doIntervene(msg)}
+        />
+      )}
     </>
+  );
+}
+
+const PRESETS: Record<'alert' | 'ammonizione' | 'annulla', string[]> = {
+  alert: [
+    'Concentrati sulla tua prova.',
+    'Smetti di usare altri dispositivi.',
+    'Torna sulla scheda della verifica.',
+    'Resta in silenzio.',
+  ],
+  ammonizione: [
+    'Uso del telefono / dispositivi non consentiti',
+    'Consultazione di materiale non autorizzato',
+    'Comunicazione con altri studenti',
+    'Comportamento scorretto durante la prova',
+  ],
+  annulla: [
+    'Uso di dispositivi vietati',
+    'Copiatura accertata',
+    'Comportamento gravemente scorretto',
+  ],
+};
+
+const INTERVENE_META = {
+  alert: { title: '✉️ Invia un alert', cta: 'Invia alert', danger: false, help: 'Messaggio momentaneo: compare allo studente e poi scompare. Non lascia traccia.' },
+  ammonizione: { title: '⚠️ Ammonisci lo studente', cta: 'Registra ammonizione', danger: false, help: "L'ammonizione resta registrata e compare sul PDF/resoconto della verifica." },
+  annulla: { title: '⛔ Annulla la prova', cta: 'Annulla la prova', danger: true, help: 'La prova viene interrotta e bloccata: lo studente non potrà più rispondere. Il motivo gli verrà mostrato.' },
+} as const;
+
+function InterveneModal({
+  studentName,
+  type,
+  busy,
+  onClose,
+  onConfirm,
+}: {
+  studentName: string;
+  type: 'alert' | 'ammonizione' | 'annulla';
+  busy: boolean;
+  onClose: () => void;
+  onConfirm: (message: string) => void;
+}) {
+  const meta = INTERVENE_META[type];
+  const [msg, setMsg] = useState('');
+
+  return (
+    <div className="alert-overlay" role="dialog" aria-modal="true">
+      <div className="card" style={{ maxWidth: 520, width: '100%', borderTop: `5px solid ${meta.danger ? 'var(--error)' : 'var(--primary)'}` }}>
+        <h3 style={{ marginTop: 0 }}>{meta.title}</h3>
+        <p className="muted" style={{ marginTop: 0 }}>
+          Studente: <strong>{studentName}</strong>
+        </p>
+        <p className="muted" style={{ fontSize: '0.85rem', marginTop: 0 }}>{meta.help}</p>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.6rem' }}>
+          {PRESETS[type].map((p) => (
+            <button key={p} type="button" className="preset-chip" onClick={() => setMsg(p)}>{p}</button>
+          ))}
+        </div>
+
+        <div className="field">
+          <label htmlFor="intervene-msg">{type === 'alert' ? 'Messaggio' : 'Motivo'}</label>
+          <textarea
+            id="intervene-msg"
+            value={msg}
+            onChange={(e) => setMsg(e.target.value)}
+            rows={3}
+            autoFocus
+            placeholder={type === 'alert' ? 'Scrivi il messaggio…' : 'Scrivi il motivo…'}
+            style={{ width: '100%', padding: '0.5rem 0.7rem', border: '1px solid var(--border)', borderRadius: 5, fontFamily: 'inherit', fontSize: '0.95rem', background: 'var(--input-bg)', color: 'var(--fg)', resize: 'vertical' }}
+          />
+        </div>
+
+        <div className="actions" style={{ flexWrap: 'wrap' }}>
+          <button
+            className="btn"
+            type="button"
+            disabled={busy || (type !== 'annulla' && msg.trim().length === 0)}
+            style={meta.danger ? { background: 'var(--error)', borderColor: 'var(--error)' } : undefined}
+            onClick={() => onConfirm(msg.trim())}
+          >
+            {busy ? 'Invio…' : meta.cta}
+          </button>
+          <button className="btn btn-secondary" type="button" onClick={onClose} style={{ marginLeft: 'auto' }}>Annulla</button>
+        </div>
+      </div>
+    </div>
   );
 }

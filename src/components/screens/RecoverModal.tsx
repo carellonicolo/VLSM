@@ -1,4 +1,4 @@
-import type { RecoverableSession } from '../../lib/cloudSync';
+import type { RecoverableSession } from '../../lib/studentApi';
 import { formatTimeOfDay } from '../../lib/format';
 
 interface Props {

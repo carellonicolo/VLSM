@@ -2,6 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Default border morbido per i componenti shadcn (calcolatori): senza questa
+   regola le classi Tailwind `border` userebbero `currentColor` (bianco in dark)
+   producendo bordi troppo netti. Le utility `border-primary`, `border-input`,
+   ecc. hanno specificità maggiore e mantengono il loro colore. */
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: hsl(var(--sc-border));
+  }
+}
+
 /* Variabili shadcn/ui per i calcolatori (portati da Subnet).
    Prefisso --sc-* per non collidere con quelle VLSM (--bg, --primary, ecc.). */
 :root {
@@ -505,6 +517,7 @@ body::before {
 }
 
 input[type='text'],
+input[type='email'],
 input[type='password'],
 input[type='number'],
 select {
@@ -1284,4 +1297,223 @@ label {
 .calcolatori-page [data-radix-popper-content-wrapper] {
   z-index: 60;
 }
+
+/* ============================================================
+   MODALI CALCOLATORI (shadcn Dialog) — look morbido e moderno.
+   Portate nel <body>: stili NON scoped a .calcolatori-page.
+   ============================================================ */
+.calc-modal {
+  box-shadow: 0 24px 60px rgba(2, 6, 23, 0.40), 0 4px 14px rgba(2, 6, 23, 0.22);
+}
+/* Tema chiaro: bordo appena percettibile + sfondo morbido */
+.calc-modal {
+  border-color: hsl(214 20% 88%);
+}
+/* Tema scuro: pannello sollevato rispetto al fondo quasi nero, bordo tenue */
+[data-theme='dark'] .calc-modal {
+  background-color: hsl(222 26% 12%);
+  border-color: hsl(215 20% 22%);
+}
+[data-theme='dark'] .calc-modal .bg-card,
+[data-theme='dark'] .calc-modal .bg-popover {
+  background-color: hsl(222 22% 16%);
+}
+[data-theme='dark'] .calc-modal .bg-muted,
+[data-theme='dark'] .calc-modal .bg-secondary {
+  background-color: hsl(222 18% 20%);
+}
+/* La X di chiusura: meno dura */
+.calc-modal .absolute.right-4.top-4 {
+  opacity: 0.55;
+}
+
+/* ============================================================
+   ACCOUNT / DASHBOARD / INTERVENTI ESAME (upgrade account studenti)
+   ============================================================ */
+.account-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.account-chip-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  text-decoration: none;
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.account-chip-link:hover { background: rgba(255, 255, 255, 0.28); }
+.account-chip-logout {
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: transparent;
+  color: #fff;
+  border-radius: 999px;
+  padding: 0.28rem 0.6rem;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+.account-chip-logout:hover { background: rgba(255, 255, 255, 0.2); }
+
+.identity-box {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.5rem;
+  padding: 0.7rem 0.9rem;
+  background: var(--readonly-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
+}
+
+.dash-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.dash-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.dash-action { margin: 0; }
+.dash-action-disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  filter: grayscale(0.3);
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.stat-tile {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.85rem 0.6rem;
+  text-align: center;
+}
+.stat-value {
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--fg);
+}
+.stat-label {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-top: 0.25rem;
+}
+.stat-good .stat-value { color: var(--primary); }
+.stat-warn { border-color: var(--warn-border); }
+.stat-warn .stat-value { color: var(--warn-text); }
+.stat-bad { border-color: var(--error); }
+.stat-bad .stat-value { color: var(--error); }
+
+/* Overlay a tutta pagina per gli interventi del docente */
+.exam-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(10, 15, 30, 0.78);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  backdrop-filter: blur(2px);
+}
+.exam-overlay-card,
+.exam-msg-card {
+  background: var(--card);
+  border-radius: 14px;
+  padding: 1.6rem 1.4rem;
+  max-width: 460px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+}
+.exam-overlay-card { border-top: 6px solid var(--error); }
+.exam-overlay-reason {
+  background: var(--error-bg);
+  color: var(--error-text);
+  border-radius: 8px;
+  padding: 0.6rem 0.8rem;
+  margin: 0.5rem 0;
+  font-size: 0.92rem;
+}
+.exam-msg-alert { border-top: 6px solid var(--warn-border); }
+.exam-msg-ammonizione { border-top: 6px solid var(--error); }
+
+/* Badge contatore sulle tab (es. studenti in attesa) */
+.tab-badge {
+  display: inline-block;
+  min-width: 1.15rem;
+  padding: 0 0.3rem;
+  margin-left: 0.4rem;
+  border-radius: 999px;
+  background: var(--error);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.2rem;
+  text-align: center;
+}
+
+/* Toast notifiche */
+.toast-container {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: min(92vw, 380px);
+}
+.toast {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  padding: 0.7rem 0.9rem;
+  border-radius: 8px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  font-size: 0.9rem;
+  color: var(--fg);
+  cursor: pointer;
+  animation: toast-in 0.18s ease;
+}
+.toast-success { border-left: 4px solid var(--success); }
+.toast-error { border-left: 4px solid var(--error); }
+.toast-info { border-left: 4px solid var(--primary); }
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Chip preset (modale interventi docente) */
+.preset-chip {
+  border: 1px solid var(--border);
+  background: var(--readonly-bg);
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+  color: var(--fg);
+}
+.preset-chip:hover { border-color: var(--primary); background: var(--input-focus-bg); }
 

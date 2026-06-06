@@ -1,4 +1,4 @@
-import type { SyncStatus } from '../../hooks/useCloudSync';
+import type { SyncStatus } from '../../hooks/useStudentSync';
 import { formatDuration } from '../../lib/format';
 
 interface Props {

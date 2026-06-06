@@ -1,11 +1,15 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { parseMultiple, toCsv, downloadCsv, type ParsedFile } from '../../lib/pdfBulk';
+import { cloudListStudents } from '../../lib/cloudSync';
 import type { VerifyStatus } from '../../lib/pdfSign';
 import { redirectToLogout } from '../../lib/auth';
 import { SessionsLive } from './SessionsLive';
 import { SettingsTab } from './SettingsTab';
+import { VerificheTab } from './VerificheTab';
+import { StudentsTab } from './StudentsTab';
+import { ClassesTab } from './ClassesTab';
 
-type AdminTab = 'live' | 'bulk' | 'settings';
+type AdminTab = 'studenti' | 'classi' | 'live' | 'bulk' | 'verifiche' | 'settings';
 
 interface Props {
   onExit: () => void;
@@ -49,8 +53,25 @@ function badgeLabel(status: VerifyStatus | undefined): string {
 }
 
 export function AdminScreen({ onExit }: Props) {
-  const [tab, setTab] = useState<AdminTab>('live');
+  const [tab, setTab] = useState<AdminTab>('studenti');
+  const [pendingCount, setPendingCount] = useState(0);
   const [parsing, setParsing] = useState(false);
+
+  // Conteggio studenti in attesa di convalida (badge sulla tab), aggiornato
+  // periodicamente e ad ogni cambio tab.
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      const res = await cloudListStudents('pending');
+      if (active && res.ok) setPendingCount(res.students.length);
+    };
+    void load();
+    const id = setInterval(load, 30_000);
+    return () => {
+      active = false;
+      clearInterval(id);
+    };
+  }, [tab]);
   const [parsed, setParsed] = useState<ParsedFile[]>([]);
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
@@ -133,6 +154,21 @@ export function AdminScreen({ onExit }: Props) {
 
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
         <button
+          className={tab === 'studenti' ? 'btn' : 'btn btn-secondary'}
+          type="button"
+          onClick={() => setTab('studenti')}
+        >
+          👥 Studenti
+          {pendingCount > 0 && <span className="tab-badge" title={`${pendingCount} in attesa di convalida`}>{pendingCount}</span>}
+        </button>
+        <button
+          className={tab === 'classi' ? 'btn' : 'btn btn-secondary'}
+          type="button"
+          onClick={() => setTab('classi')}
+        >
+          🎛 Classi &amp; esame
+        </button>
+        <button
           className={tab === 'live' ? 'btn' : 'btn btn-secondary'}
           type="button"
           onClick={() => setTab('live')}
@@ -147,6 +183,13 @@ export function AdminScreen({ onExit }: Props) {
           📥 Correzione PDF (bulk)
         </button>
         <button
+          className={tab === 'verifiche' ? 'btn' : 'btn btn-secondary'}
+          type="button"
+          onClick={() => setTab('verifiche')}
+        >
+          📄 Verifiche &amp; Soluzioni
+        </button>
+        <button
           className={tab === 'settings' ? 'btn' : 'btn btn-secondary'}
           type="button"
           onClick={() => setTab('settings')}
@@ -155,7 +198,10 @@ export function AdminScreen({ onExit }: Props) {
         </button>
       </div>
 
+      {tab === 'studenti' && <StudentsTab active={tab === 'studenti'} />}
+      {tab === 'classi' && <ClassesTab active={tab === 'classi'} />}
       {tab === 'live' && <SessionsLive active={tab === 'live'} />}
+      {tab === 'verifiche' && <VerificheTab />}
       {tab === 'settings' && <SettingsTab active={tab === 'settings'} />}
 
       {tab === 'bulk' && (

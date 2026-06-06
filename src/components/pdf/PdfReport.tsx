@@ -341,6 +341,19 @@ export function PdfReport({ esito }: Props) {
           </View>
         )}
 
+        {esito.categoria !== 'esercitazione' && esito.ammonizioni && esito.ammonizioni.length > 0 && (
+          <View style={[styles.monitorBox, styles.monitorWarn]} wrap={false}>
+            <Text style={styles.monitorTitle}>
+              {`⚠ Ammonizioni del docente — ${esito.ammonizioni.length} ricevuta${esito.ammonizioni.length === 1 ? '' : 'e'} durante la verifica`}
+            </Text>
+            {esito.ammonizioni.map((a, i) => (
+              <View key={i} style={styles.monitorEventoTr}>
+                <Text>#{i + 1} — {formatTimeOfDay(a.at)} — {a.message}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
         {esito.categoria !== 'esercitazione' && (
           <View style={styles.firme} wrap={false}>
             <View style={styles.firmaBox}>
