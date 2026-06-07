@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { AppShell } from '../ui/AppShell';
 import { ProgressView } from '../dashboard/ProgressView';
 import { useAuth } from '../../hooks/useAuth';
-import { studentHistory, type HistorySession } from '../../lib/studentApi';
+import { studentGetSession, studentHistory, type HistorySession } from '../../lib/studentApi';
 
 function StatusBanner() {
   const { student, exam, refresh } = useAuth();
@@ -12,16 +12,24 @@ function StatusBanner() {
   if (student.status === 'validated') {
     return (
       <div className="card" style={{ borderLeft: '4px solid var(--success)' }}>
-        <strong style={{ color: 'var(--success)' }}>✅ Account convalidato</strong>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <strong style={{ color: 'var(--success)' }}>✅ Account convalidato</strong>
+          <button
+            type="button"
+            onClick={() => void refresh()}
+            title="Aggiorna stato"
+            aria-label="Aggiorna stato"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.95rem', lineHeight: 1, padding: '0.1rem', color: 'var(--muted)' }}
+          >
+            🔄
+          </button>
+        </div>
         <div className="muted" style={{ marginTop: '0.25rem' }}>
           Classe: <strong>{student.class}</strong>.{' '}
           {exam?.available
             ? 'La modalità verifica è attiva per la tua classe: puoi svolgere una verifica.'
             : 'La modalità verifica non è attiva al momento. Potrai svolgerla quando il docente la sbloccherà per la tua classe.'}
         </div>
-        <button className="btn btn-secondary" type="button" style={{ marginTop: '0.6rem' }} onClick={() => void refresh()}>
-          🔄 Aggiorna stato
-        </button>
       </div>
     );
   }
@@ -135,6 +143,10 @@ export function StudentDashboard() {
         <ProgressView
           sessions={sessions}
           subject={{ name: student.fullName, subtitle: `${student.email}${student.class ? ` · ${student.class}` : ''}` }}
+          fetchSessionForPdf={async (id) => {
+            const r = await studentGetSession(id);
+            return r.ok && r.detail ? r.detail : null;
+          }}
         />
       )}
     </AppShell>

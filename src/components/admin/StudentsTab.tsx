@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  cloudGetSession,
   cloudGetStudent,
   cloudListClasses,
   cloudListStudents,
@@ -255,6 +256,10 @@ function DetailModal({ detail, loading, onClose }: { detail: AdminStudentDetail 
                 subject={{
                   name: detail.student.full_name,
                   subtitle: `${detail.student.email}${detail.student.class ? ` · ${detail.student.class}` : ''}`,
+                }}
+                fetchSessionForPdf={async (id) => {
+                  const r = await cloudGetSession(id);
+                  return r.ok && r.session ? r.session : null;
                 }}
               />
             </div>

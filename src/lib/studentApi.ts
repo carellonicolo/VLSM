@@ -120,3 +120,33 @@ export interface HistorySession {
 export async function studentHistory(): Promise<ApiResult<{ sessions: HistorySession[] }>> {
   return authFetch<{ sessions: HistorySession[] }>('/api/student/history', { method: 'GET' });
 }
+
+/** Dettaglio completo di una propria prova (per rigenerare il PDF). */
+export interface StudentSessionDetail {
+  id: string;
+  student_name: string;
+  student_class: string;
+  verifica_id: string;
+  verifica_titolo: string;
+  categoria: 'verifica' | 'esercitazione';
+  state: string;
+  started_at: string;
+  consegnato_at: string | null;
+  updated_at: string;
+  motivo_consegna: string | null;
+  voto30: number | null;
+  answers: unknown;
+  eventiFocus: { startedAt: string; durataMs: number }[];
+  esito: unknown;
+}
+
+export async function studentGetSession(
+  id: string
+): Promise<{ ok: boolean; detail?: StudentSessionDetail; error?: string }> {
+  const res = await authFetch<{ session: StudentSessionDetail }>(
+    `/api/student/session/${encodeURIComponent(id)}`,
+    { method: 'GET' }
+  );
+  if (res.ok && res.data?.session) return { ok: true, detail: res.data.session };
+  return { ok: false, error: res.error };
+}

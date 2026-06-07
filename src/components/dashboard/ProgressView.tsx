@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { HistorySession } from '../../lib/studentApi';
 import { computeStats, type ProgressStats } from '../../lib/progress';
 import { buildCsv, downloadBlob, downloadCsv, safeFileName } from '../../lib/csv';
+import { downloadSessionPdf, type SessionPdfSource } from '../../lib/sessionPdf';
 import { useToast } from '../ui/Toast';
 
 interface Props {
@@ -9,6 +10,12 @@ interface Props {
   compact?: boolean;
   /** Nome/sottotitolo usati per etichettare gli export (CSV/PDF). */
   subject?: { name: string; subtitle?: string };
+  /**
+   * Recupera il dettaglio completo di una prova (risposte + esito) per generarne
+   * il PDF. Diverso per studente (proprie prove) e docente (qualsiasi studente).
+   * Se assente, il pulsante "PDF" per riga non viene mostrato.
+   */
+  fetchSessionForPdf?: (sessionId: string) => Promise<SessionPdfSource | null>;
 }
 
 function statoTesto(st: string): string {
@@ -19,11 +26,32 @@ function statoTesto(st: string): string {
   return st;
 }
 
-export function ProgressView({ sessions, compact, subject }: Props) {
+export function ProgressView({ sessions, compact, subject, fetchSessionForPdf }: Props) {
   const stats = useMemo(() => computeStats(sessions), [sessions]);
   const [pdfBusy, setPdfBusy] = useState(false);
+  const [rowBusy, setRowBusy] = useState<string | null>(null);
   const toast = useToast();
   const name = subject?.name ?? 'Andamento';
+
+  const exportSession = useCallback(
+    async (id: string) => {
+      if (!fetchSessionForPdf) return;
+      setRowBusy(id);
+      try {
+        const src = await fetchSessionForPdf(id);
+        if (!src) {
+          toast('Dettaglio della prova non disponibile.', 'error');
+          return;
+        }
+        await downloadSessionPdf(src);
+      } catch (e) {
+        toast(`Errore generazione PDF: ${e instanceof Error ? e.message : String(e)}`, 'error');
+      } finally {
+        setRowBusy(null);
+      }
+    },
+    [fetchSessionForPdf, toast]
+  );
 
   const exportCsv = () => {
     const headers = ['Data', 'Tipo', 'Prova', 'Livello', 'Voto/30', 'Distrazioni', 'Ammonizioni', 'Stato'];
@@ -74,7 +102,12 @@ export function ProgressView({ sessions, compact, subject }: Props) {
         <TrendChart stats={stats} />
       </div>
       <PerLivello stats={stats} />
-      <HistoryTable sessions={sessions} compact={compact} />
+      <HistoryTable
+        sessions={sessions}
+        compact={compact}
+        onExport={fetchSessionForPdf ? exportSession : undefined}
+        exportingId={rowBusy}
+      />
     </>
   );
 }
@@ -177,7 +210,17 @@ function stateLabel(s: HistorySession): { text: string; color: string } {
   return { text: s.state, color: 'var(--muted)' };
 }
 
-function HistoryTable({ sessions, compact }: { sessions: HistorySession[]; compact?: boolean }) {
+function HistoryTable({
+  sessions,
+  compact,
+  onExport,
+  exportingId,
+}: {
+  sessions: HistorySession[];
+  compact?: boolean;
+  onExport?: (id: string) => void;
+  exportingId?: string | null;
+}) {
   if (sessions.length === 0) {
     return <div className="card muted">Nessuna attività registrata finora.</div>;
   }
@@ -196,6 +239,7 @@ function HistoryTable({ sessions, compact }: { sessions: HistorySession[]; compa
               {!compact && <th>Distrazioni</th>}
               {!compact && <th>Ammonizioni</th>}
               <th>Stato</th>
+              {onExport && <th>PDF</th>}
             </tr>
           </thead>
           <tbody>
@@ -215,6 +259,24 @@ function HistoryTable({ sessions, compact }: { sessions: HistorySession[]; compa
                     <td>{s.ammonizioni_count > 0 ? <span style={{ color: 'var(--error)', fontWeight: 600 }}>⚠ {s.ammonizioni_count}</span> : '—'}</td>
                   )}
                   <td style={{ color: st.color, fontWeight: 600, whiteSpace: 'nowrap' }}>{st.text}</td>
+                  {onExport && (
+                    <td>
+                      {s.state === 'consegnata' ? (
+                        <button
+                          className="btn btn-secondary"
+                          type="button"
+                          style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                          disabled={exportingId === s.id}
+                          onClick={() => onExport(s.id)}
+                          title="Scarica il PDF di questa prova"
+                        >
+                          {exportingId === s.id ? '⏳' : '📄 PDF'}
+                        </button>
+                      ) : (
+                        <span className="muted">—</span>
+                      )}
+                    </td>
+                  )}
                 </tr>
               );
             })}
