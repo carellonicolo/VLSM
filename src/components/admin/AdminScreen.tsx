@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { parseMultiple, toCsv, downloadCsv, type ParsedFile } from '../../lib/pdfBulk';
 import { cloudListStudents } from '../../lib/cloudSync';
-import type { VerifyStatus } from '../../lib/pdfSign';
 import { redirectToLogout } from '../../lib/auth';
+import type { VerifyStatus } from '../../lib/pdfSign';
 import { SessionsLive } from './SessionsLive';
 import { SettingsTab } from './SettingsTab';
 import { VerificheTab } from './VerificheTab';

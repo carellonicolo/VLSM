@@ -2,8 +2,8 @@
  * Helper per leggere/scrivere le settings runtime + audit log.
  *
  * Con l'SSO centralizzato l'autenticazione non vive più qui: restano solo le
- * impostazioni applicative (es. `verifica_enabled`, il master-switch del docente
- * per abilitare/disabilitare globalmente le verifiche ufficiali).
+ * impostazioni applicative (es. `verifica_enabled`, il master-switch globale
+ * delle verifiche). Lo stato esame per-classe è in _lib/classes.ts.
  */
 import type { SharedEnv } from './shared';
 

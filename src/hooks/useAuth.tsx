@@ -1,22 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import {
-  apiChangePassword,
-  apiLogin,
-  apiMe,
-  apiRegister,
-  clearToken,
-  getToken,
-  type ExamState,
-  type StudentProfile,
-} from '../lib/auth';
+import { apiMe, redirectToLogin, redirectToLogout, type ExamState, type StudentProfile } from '../lib/auth';
 
 interface AuthContextValue {
   loading: boolean;
   student: StudentProfile | null;
   exam: ExamState | null;
-  login: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
-  register: (input: { email: string; password: string; fullName: string; declaredClass: string }) => Promise<{ ok: boolean; error?: string }>;
-  changePassword: (current: string, next: string) => Promise<{ ok: boolean; error?: string }>;
+  /** Manda al login centrale SSO. */
+  login: () => void;
+  /** Logout globale SSO. */
   logout: () => void;
   refresh: () => Promise<void>;
 }
@@ -30,18 +21,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const mounted = useRef(true);
 
   const refresh = useCallback(async () => {
-    if (!getToken()) {
-      setStudent(null);
-      setExam(null);
-      return;
-    }
     const res = await apiMe();
     if (!mounted.current) return;
     if (res.ok && res.data) {
       setStudent(res.data.student);
       setExam(res.data.exam);
     } else if (res.status === 401) {
-      clearToken();
       setStudent(null);
       setExam(null);
     }
@@ -59,45 +44,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [refresh]);
 
-  const login = useCallback(async (email: string, password: string) => {
-    const res = await apiLogin(email, password);
-    if (res.ok) {
-      await refresh();
-      return { ok: true };
-    }
-    return { ok: false, error: res.error };
-  }, [refresh]);
-
-  const register = useCallback(
-    async (input: { email: string; password: string; fullName: string; declaredClass: string }) => {
-      const res = await apiRegister(input);
-      if (res.ok) {
-        await refresh();
-        return { ok: true };
-      }
-      return { ok: false, error: res.error };
-    },
-    [refresh]
-  );
-
-  const changePassword = useCallback(async (current: string, next: string) => {
-    const res = await apiChangePassword(current, next);
-    if (res.ok) {
-      await refresh();
-      return { ok: true };
-    }
-    return { ok: false, error: res.error };
-  }, [refresh]);
-
-  const logout = useCallback(() => {
-    clearToken();
-    setStudent(null);
-    setExam(null);
-  }, []);
+  const login = useCallback(() => redirectToLogin(), []);
+  const logout = useCallback(() => redirectToLogout(), []);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ loading, student, exam, login, register, changePassword, logout, refresh }),
-    [loading, student, exam, login, register, changePassword, logout, refresh]
+    () => ({ loading, student, exam, login, logout, refresh }),
+    [loading, student, exam, login, logout, refresh]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

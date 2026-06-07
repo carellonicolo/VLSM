@@ -1,4 +1,4 @@
-import { jsonError, jsonOk, requireAuth, type SharedEnv } from '../../_lib/shared';
+import { jsonError, jsonOk, requireSuperAdmin, type SharedEnv } from '../../_lib/shared';
 
 /**
  * GET /api/admin/students?status=&class= — elenco studenti per il docente.
@@ -6,8 +6,8 @@ import { jsonError, jsonOk, requireAuth, type SharedEnv } from '../../_lib/share
  * Solo password docente.
  */
 export const onRequestGet: PagesFunction<SharedEnv> = async ({ request, env }) => {
-  const unauth = await requireAuth(request, env, 'admin');
-  if (unauth) return unauth;
+  const auth = await requireSuperAdmin(request);
+  if (auth instanceof Response) return auth;
 
   const url = new URL(request.url);
   const status = url.searchParams.get('status') ?? 'all';

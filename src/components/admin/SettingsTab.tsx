@@ -6,10 +6,12 @@ import {
   type AdminSettings,
   type AuditEntry,
 } from '../../lib/cloudSync';
+import { useToast } from '../ui/Toast';
 
 interface Props { active: boolean }
 
 export function SettingsTab({ active }: Props) {
+  const toast = useToast();
   const [settings, setSettings] = useState<AdminSettings | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,15 +40,19 @@ export function SettingsTab({ active }: Props) {
     setBusy(true);
     const res = await cloudSetVerificaEnabled(!settings.verificaEnabled);
     setBusy(false);
-    if (res.ok) void reload();
-    else alert(`Errore: ${res.error}`);
+    if (res.ok) {
+      toast(settings.verificaEnabled ? 'Modalità verifica disattivata.' : 'Modalità verifica attivata.', 'success');
+      void reload();
+    } else {
+      toast(`Errore: ${res.error}`, 'error');
+    }
   };
 
   const loadAudit = async () => {
     setShowAudit(true);
     const res = await cloudGetAuditLog();
     if (res.ok) setAuditEntries(res.entries);
-    else alert(`Errore: ${res.error}`);
+    else toast(`Errore: ${res.error}`, 'error');
   };
 
   if (loading && !settings) {
@@ -71,13 +77,14 @@ export function SettingsTab({ active }: Props) {
 
   return (
     <>
-      {/* Toggle modalità verifica */}
+      {/* Toggle modalità verifica (master globale) */}
       <div className="card">
-        <h3 style={{ marginTop: 0 }}>🟢 Modalità verifica</h3>
+        <h3 style={{ marginTop: 0 }}>🟢 Modalità verifica (master)</h3>
         <p className="muted">
-          Master-switch globale delle verifiche ufficiali. Quando disattivata, gli studenti
-          vedono la sezione "Svolgi la verifica" disabilitata. Le esercitazioni libere e
-          l'accesso docente restano sempre attivi.
+          Interruttore generale: quando è <strong>disattivato</strong>, la verifica è bloccata per
+          <strong> tutte le classi</strong>. Per sbloccare l'esame a una singola classe usa la tab
+          <strong> «🎛 Classi &amp; esame»</strong>. Le esercitazioni restano sempre disponibili agli
+          studenti loggati.
         </p>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
           <div
@@ -100,20 +107,6 @@ export function SettingsTab({ active }: Props) {
             {settings.verificaEnabled ? 'Disattiva modalità verifica' : 'Attiva modalità verifica'}
           </button>
         </div>
-      </div>
-
-      {/* Accesso studenti (SSO) */}
-      <div className="card">
-        <h3 style={{ marginTop: 0 }}>🔐 Accesso studenti</h3>
-        <p className="muted">
-          L'accesso è gestito dal login centralizzato{' '}
-          <a href="https://auth.nicolocarello.it/admin" target="_blank" rel="noopener noreferrer">
-            auth.nicolocarello.it
-          </a>
-          . Gli studenti accedono con il proprio account; per svolgere una verifica ufficiale
-          devono avere una <strong>classe approvata</strong> dal docente. Utenti, classi e
-          approvazioni si gestiscono dalla console super-admin dell'IdP, non più da qui.
-        </p>
       </div>
 
       {/* Audit log */}

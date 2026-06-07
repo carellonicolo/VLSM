@@ -1,45 +1,6 @@
-import type { EsitoFinale, RispostaStudente, EventoFocus, Categoria } from '../types/domain';
-
-export interface CloudSessionPayload {
-  clientId: string;
-  studente: { nome: string; classe: string };
-  categoria: Categoria;
-  verificaId: string;
-  verificaTitolo: string;
-  difficolta?: string;
-  startedAt: string;
-  deadlineAt: string;
-  durationMin: number;
-  answers: RispostaStudente;
-  eventiFocus: EventoFocus[];
-  state: 'in_progress' | 'consegnata' | 'abbandonata';
-  consegnatoAt?: string;
-  esito?: EsitoFinale;
-  voto30?: number;
-  signature?: string;
-  signedAt?: string;
-  motivoConsegna?: 'volontaria' | 'timeout';
-}
-
-export interface RecoverableSession {
-  id: string;
-  studente: { nome: string; classe: string };
-  categoria: Categoria;
-  verificaId: string;
-  verificaTitolo: string;
-  difficolta?: string | null;
-  startedAt: string;
-  deadlineAt: string;
-  updatedAt: string;
-  durationMin: number;
-  answers: RispostaStudente;
-  eventiFocus: EventoFocus[];
-  clientId: string;
-  previousClientUserAgent?: string | null;
-}
-
-// Autenticazione via SSO: il cookie condiviso `nc_session` viaggia da solo.
-// `credentials: 'include'` lo allega anche se in futuro le API fossero cross-origin.
+// Funzioni lato DOCENTE: autenticate via cookie SSO (il server verifica che
+// l'utente sia super-admin sull'IdP). Le chiamate studente usano lo stesso
+// cookie tramite lib/auth.ts. Nessuna password condivisa.
 async function api(path: string, init: RequestInit): Promise<Response> {
   const headers = new Headers(init.headers);
   if (init.body && !headers.has('content-type')) {
@@ -48,55 +9,19 @@ async function api(path: string, init: RequestInit): Promise<Response> {
   return fetch(path, { ...init, headers, credentials: 'include' });
 }
 
-const SAVE_TIMEOUT_MS = 7000;
-
-export async function cloudSave(payload: CloudSessionPayload): Promise<{ ok: boolean; updatedAt?: string; error?: string }> {
-  const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), SAVE_TIMEOUT_MS);
-  try {
-    const res = await api('/api/session/save', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-      signal: ctrl.signal,
-    });
-    if (!res.ok) {
-      const body = await res.text().catch(() => '');
-      return { ok: false, error: `HTTP ${res.status}: ${body.slice(0, 200)}` };
-    }
-    const data = (await res.json()) as { ok: boolean; updatedAt?: string };
-    return { ok: !!data.ok, updatedAt: data.updatedAt };
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) };
-  } finally {
-    clearTimeout(t);
-  }
-}
-
-export async function cloudRecover(nome: string, classe: string): Promise<RecoverableSession | null> {
-  const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), 6000);
-  try {
-    const url = `/api/session/recover?nome=${encodeURIComponent(nome)}&classe=${encodeURIComponent(classe)}`;
-    const res = await api(url, { method: 'GET', signal: ctrl.signal });
-    if (!res.ok) return null;
-    const data = (await res.json()) as { found: boolean; session?: RecoverableSession };
-    return data.found && data.session ? data.session : null;
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(t);
-  }
-}
+export type SessionState = 'in_progress' | 'consegnata' | 'abbandonata' | 'annullata';
 
 export interface CloudSessionRow {
   id: string;
   student_name: string;
   student_class: string;
+  student_id: string | null;
+  student_email: string | null;
   categoria: string;
   verifica_id: string;
   verifica_titolo: string;
   difficolta: string | null;
-  state: 'in_progress' | 'consegnata' | 'abbandonata';
+  state: SessionState;
   started_at: string;
   deadline_at: string;
   consegnato_at: string | null;
@@ -105,10 +30,12 @@ export interface CloudSessionRow {
   voto30: number | null;
   signed: 0 | 1;
   motivo_consegna: string | null;
+  annullata_motivo: string | null;
   client_id: string;
   client_user_agent: string | null;
   client_ip: string | null;
   distrazioni_count: number;
+  ammonizioni_count: number;
   answers_size: number;
 }
 
@@ -131,11 +58,13 @@ export interface CloudSessionDetail {
   id: string;
   student_name: string;
   student_class: string;
+  student_id: string | null;
+  student_email: string | null;
   categoria: 'verifica' | 'esercitazione';
   verifica_id: string;
   verifica_titolo: string;
   difficolta: string | null;
-  state: 'in_progress' | 'consegnata' | 'abbandonata';
+  state: SessionState;
   started_at: string;
   deadline_at: string;
   consegnato_at: string | null;
@@ -145,9 +74,11 @@ export interface CloudSessionDetail {
   signature: string | null;
   signed_at: string | null;
   motivo_consegna: string | null;
+  annullata_motivo: string | null;
   answers: unknown;
   eventiFocus: { startedAt: string; durataMs: number }[];
   esito: unknown;
+  events: { id: number; type: string; message: string | null; created_at: string }[];
 }
 
 export async function cloudGetSession(id: string): Promise<{ ok: boolean; session?: CloudSessionDetail; error?: string }> {
@@ -180,22 +111,7 @@ export async function cloudReopenSession(id: string, extendMinutes = 15): Promis
   }
 }
 
-// ====== Settings (runtime config dal DB) ======
-// L'autenticazione è gestita dall'SSO (vedi src/lib/auth.ts): qui restano solo
-// le impostazioni applicative.
-
-export interface PublicConfig { verificaEnabled: boolean }
-
-export async function cloudGetConfig(): Promise<PublicConfig> {
-  try {
-    const res = await fetch('/api/auth/config', { method: 'GET' });
-    if (!res.ok) return { verificaEnabled: true };
-    const data = (await res.json()) as PublicConfig;
-    return { verificaEnabled: data.verificaEnabled !== false };
-  } catch {
-    return { verificaEnabled: true };
-  }
-}
+// ====== Settings docente (runtime config dal DB) ======
 
 export interface AdminSettings {
   verificaEnabled: boolean;
@@ -267,6 +183,114 @@ export async function cloudDeleteSession(id: string): Promise<{ ok: boolean; err
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
+}
+
+// ====== Gestione studenti & classi (docente) ======
+
+export interface AdminStudent {
+  id: string;
+  email: string;
+  full_name: string;
+  declared_class: string | null;
+  class: string | null;
+  status: 'pending' | 'validated' | 'rejected' | 'disabled' | string;
+  must_change_password: number;
+  created_at: string;
+  validated_at: string | null;
+  last_login_at: string | null;
+  n_verifiche: number;
+  n_esercitazioni: number;
+  n_in_corso: number;
+}
+
+export async function cloudListStudents(status = 'all', klass = ''): Promise<{ ok: boolean; students: AdminStudent[]; error?: string }> {
+  try {
+    const params = new URLSearchParams();
+    if (status && status !== 'all') params.set('status', status);
+    if (klass) params.set('class', klass);
+    const qs = params.toString();
+    const res = await api(`/api/admin/students${qs ? `?${qs}` : ''}`, { method: 'GET' });
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      return { ok: false, students: [], error: `HTTP ${res.status}: ${body.slice(0, 200)}` };
+    }
+    const data = (await res.json()) as { students: AdminStudent[] };
+    return { ok: true, students: data.students ?? [] };
+  } catch (e) {
+    return { ok: false, students: [], error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+export interface AdminStudentDetail {
+  student: AdminStudent & { notes: string | null };
+  sessions: import('./studentApi').HistorySession[];
+}
+
+export async function cloudGetStudent(id: string): Promise<{ ok: boolean; detail?: AdminStudentDetail; error?: string }> {
+  try {
+    const res = await api(`/api/admin/students/${encodeURIComponent(id)}`, { method: 'GET' });
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      return { ok: false, error: `HTTP ${res.status}: ${body.slice(0, 200)}` };
+    }
+    const data = (await res.json()) as AdminStudentDetail;
+    return { ok: true, detail: data };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+async function adminMutate(path: string, body: unknown, method = 'POST'): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const res = await api(path, { method, body: JSON.stringify(body) });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      let msg = `HTTP ${res.status}`;
+      try { const p = JSON.parse(text); if (p?.error) msg = p.error; } catch { /* ignore */ }
+      return { ok: false, error: msg };
+    }
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+// Gestione account studente (validazione, reset password, eliminazione) è
+// delegata all'IdP centrale: in VLSM il roster è in sola lettura.
+
+export interface AdminClass {
+  class: string;
+  examEnabled: boolean;
+  examLevel: string | null;
+  nValidati: number;
+  nTotali: number;
+  nInCorso: number;
+}
+
+export async function cloudListClasses(): Promise<{ ok: boolean; classes: AdminClass[]; error?: string }> {
+  try {
+    const res = await api('/api/admin/classes', { method: 'GET' });
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      return { ok: false, classes: [], error: `HTTP ${res.status}: ${body.slice(0, 200)}` };
+    }
+    const data = (await res.json()) as { classes: AdminClass[] };
+    return { ok: true, classes: data.classes ?? [] };
+  } catch (e) {
+    return { ok: false, classes: [], error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+export function cloudSetClassExam(klass: string, enabled: boolean, level?: string | null): Promise<{ ok: boolean; error?: string }> {
+  return adminMutate('/api/admin/classes', { class: klass, enabled, level: level ?? undefined }, 'PUT');
+}
+
+export function cloudIntervene(
+  sessionId: string,
+  type: 'alert' | 'ammonizione' | 'annulla',
+  message: string
+): Promise<{ ok: boolean; error?: string }> {
+  return adminMutate(`/api/sessions/${encodeURIComponent(sessionId)}/intervene`, { type, message });
 }
 
 export function getOrCreateClientId(): string {

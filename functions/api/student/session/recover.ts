@@ -1,13 +1,13 @@
-import { jsonError, jsonOk } from '../../../_lib/shared';
-import { authenticateStudent, type AuthEnv } from '../../../_lib/auth';
+import { jsonError, jsonOk, type SharedEnv } from '../../../_lib/shared';
+import { loadStudentFromSession } from '../../../_lib/student';
 
 /**
  * GET /api/student/session/recover — trova la verifica 'in_progress' più recente
  * dello studente loggato (ultime 6 ore, deadline non scaduta da oltre 1 ora),
  * per riprenderla dopo un crash / cambio PC.
  */
-export const onRequestGet: PagesFunction<AuthEnv> = async ({ request, env }) => {
-  const auth = await authenticateStudent(request, env);
+export const onRequestGet: PagesFunction<SharedEnv> = async ({ request, env }) => {
+  const auth = await loadStudentFromSession(request, env);
   if (auth instanceof Response) return auth;
 
   const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60_000).toISOString();
@@ -70,4 +70,4 @@ export const onRequestGet: PagesFunction<AuthEnv> = async ({ request, env }) => 
   }
 };
 
-export const onRequest: PagesFunction<AuthEnv> = () => new Response('Method not allowed', { status: 405 });
+export const onRequest: PagesFunction<SharedEnv> = () => new Response('Method not allowed', { status: 405 });

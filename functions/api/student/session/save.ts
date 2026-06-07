@@ -1,5 +1,5 @@
-import { jsonError, jsonOk, normalizeText, sha256Hex } from '../../../_lib/shared';
-import { authenticateStudent, type AuthEnv } from '../../../_lib/auth';
+import { jsonError, jsonOk, normalizeText, sha256Hex, type SharedEnv } from '../../../_lib/shared';
+import { loadStudentFromSession, fetchSsoInfo, primaryApprovedClass } from '../../../_lib/student';
 import { isClassExamEnabled } from '../../../_lib/classes';
 import { getVerificaEnabled } from '../../../_lib/settings';
 
@@ -32,15 +32,19 @@ function conflict(message: string, state: string): Response {
 
 /**
  * POST /api/student/session/save — salva lo stato della sessione dello studente
- * loggato. L'identità (nome/classe) viene dall'account, NON dal client.
+ * loggato (via SSO). L'identità (nome) viene dal cookie SSO, NON dal client.
  *
  * Regole verifica:
- *  - nuova verifica → richiede studente 'validated' + master attivo + classe abilitata;
- *  - sessione già 'annullata' dal docente → ogni save viene rifiutato (409).
+ *  - nuova verifica → richiede account SSO attivo + classe approvata sull'IdP +
+ *    master attivo + classe abilitata dal docente (controllo live solo qui);
+ *  - sessione già 'annullata' dal docente → ogni save viene rifiutato (409);
  *  - esercitazioni → sempre consentite a qualunque studente loggato.
+ *
+ * I salvataggi successivi (sessione esistente) usano solo verifySession
+ * (loadStudentFromSession): nessun round-trip all'IdP, niente perdita dati.
  */
-export const onRequestPost: PagesFunction<AuthEnv> = async ({ request, env }) => {
-  const auth = await authenticateStudent(request, env);
+export const onRequestPost: PagesFunction<SharedEnv> = async ({ request, env }) => {
+  const auth = await loadStudentFromSession(request, env);
   if (auth instanceof Response) return auth;
 
   let body: SavePayload;
@@ -54,7 +58,7 @@ export const onRequestPost: PagesFunction<AuthEnv> = async ({ request, env }) =>
   }
 
   const studentName = auth.full_name;
-  const studentClass = auth.class || auth.declared_class || '';
+  let studentClass = auth.class || auth.declared_class || '';
   const id = await sha256Hex(`${auth.id}|${body.categoria}|${body.startedAt}`);
 
   try {
@@ -68,14 +72,20 @@ export const onRequestPost: PagesFunction<AuthEnv> = async ({ request, env }) =>
       return conflict('Prova interrotta dal docente.', 'annullata');
     }
 
-    // Gating: creazione di una NUOVA verifica.
+    // Gating: creazione di una NUOVA verifica → controllo live sull'IdP + classe.
     if (body.categoria === 'verifica' && body.state === 'in_progress' && !existing) {
-      if (auth.status !== 'validated') {
-        return jsonError(403, 'Account non ancora convalidato dal docente.');
+      const info = await fetchSsoInfo(request);
+      if (!info || info.status !== 'active') {
+        return jsonError(403, 'Account non attivo. Contatta il docente.');
       }
+      const approved = primaryApprovedClass(info);
+      if (!approved) {
+        return jsonError(403, 'Account non ancora abilitato: nessuna classe approvata dal docente.');
+      }
+      studentClass = approved; // la classe ufficiale della verifica è quella approvata sull'IdP
       const [master, classEnabled] = await Promise.all([
         getVerificaEnabled(env),
-        isClassExamEnabled(env, auth.class),
+        isClassExamEnabled(env, approved),
       ]);
       if (!master || !classEnabled) {
         return jsonError(403, 'La modalità verifica non è attiva per la tua classe.');
@@ -148,4 +158,4 @@ export const onRequestPost: PagesFunction<AuthEnv> = async ({ request, env }) =>
   }
 };
 
-export const onRequest: PagesFunction<AuthEnv> = () => new Response('Method not allowed', { status: 405 });
+export const onRequest: PagesFunction<SharedEnv> = () => new Response('Method not allowed', { status: 405 });

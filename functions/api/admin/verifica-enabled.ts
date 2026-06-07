@@ -6,7 +6,7 @@ interface Body { enabled?: boolean }
 /**
  * PUT /api/admin/verifica-enabled — abilita o disabilita la modalità verifica.
  * Body: { enabled: boolean }
- * Solo docente (super-admin SSO).
+ * Solo password docente.
  */
 export const onRequestPut: PagesFunction<SharedEnv> = async ({ request, env }) => {
   const auth = await requireSuperAdmin(request);

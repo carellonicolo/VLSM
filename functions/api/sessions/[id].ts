@@ -5,7 +5,7 @@ import { jsonError, jsonOk, requireSuperAdmin, type SharedEnv } from '../../_lib
  * POST   /api/sessions/:id/reopen → torna a in_progress, estende la deadline
  * DELETE /api/sessions/:id        → cancella riga (cleanup manuale)
  *
- * Solo docente (super-admin SSO).
+ * Solo password docente.
  */
 export const onRequestGet: PagesFunction<SharedEnv> = async ({ params, request, env }) => {
   const auth = await requireSuperAdmin(request);

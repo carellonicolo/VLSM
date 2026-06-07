@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { fetchMe, redirectToLogin, redirectToLogout, type MeResponse } from '../../lib/auth';
+import { fetchSsoIdentity, redirectToLogin, redirectToLogout, type SsoIdentity } from '../../lib/auth';
 
 interface Props {
   onSuccess: () => void;
@@ -9,22 +9,22 @@ interface Props {
 type GateState = 'loading' | 'anon' | 'forbidden' | 'ok';
 
 /**
- * Gate SSO per la modalità docente.
- * L'accesso è concesso solo agli utenti con isSuperAdmin=true sull'IdP
- * (auth.nicolocarello.it). Sostituisce la vecchia password docente condivisa.
+ * Gate SSO per la modalità docente. L'accesso è concesso solo agli utenti con
+ * isSuperAdmin=true sull'IdP (auth.nicolocarello.it). Sostituisce la vecchia
+ * password docente condivisa.
  */
 export function AdminLoginGate({ onSuccess }: Props) {
   const [state, setState] = useState<GateState>('loading');
-  const [me, setMe] = useState<MeResponse | null>(null);
+  const [me, setMe] = useState<SsoIdentity | null>(null);
 
   useEffect(() => {
     let active = true;
     void (async () => {
-      const meRes = await fetchMe();
+      const id = await fetchSsoIdentity();
       if (!active) return;
-      setMe(meRes);
-      if (!meRes.authenticated || !meRes.user) { setState('anon'); return; }
-      if (!meRes.isSuperAdmin) { setState('forbidden'); return; }
+      setMe(id);
+      if (!id.authenticated || !id.user) { setState('anon'); return; }
+      if (!id.isSuperAdmin) { setState('forbidden'); return; }
       setState('ok');
       onSuccess();
     })();
@@ -45,7 +45,7 @@ export function AdminLoginGate({ onSuccess }: Props) {
           <>
             <p className="muted">
               Sezione riservata al docente. Accedi con il tuo account super-admin per
-              caricare i PDF, gestire le sessioni live e configurare l'applicazione.
+              gestire studenti e classi, sessioni live, correzione e impostazioni.
             </p>
             <button className="btn btn-secondary login-card-cta" type="button" onClick={redirectToLogin}>
               Accedi come docente

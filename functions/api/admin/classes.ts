@@ -1,4 +1,4 @@
-import { jsonError, jsonOk, requireAuth, type SharedEnv } from '../../_lib/shared';
+import { jsonError, jsonOk, requireSuperAdmin, type SharedEnv } from '../../_lib/shared';
 import { setClassExam } from '../../_lib/classes';
 
 const ALLOWED_LEVELS = new Set(['Base', 'Media', 'Alta', 'Esperta', 'random', 'student']);
@@ -10,8 +10,8 @@ const ALLOWED_LEVELS = new Set(['Base', 'Media', 'Alta', 'Esperta', 'random', 's
  * Solo password docente.
  */
 export const onRequestGet: PagesFunction<SharedEnv> = async ({ request, env }) => {
-  const unauth = await requireAuth(request, env, 'admin');
-  if (unauth) return unauth;
+  const auth = await requireSuperAdmin(request);
+  if (auth instanceof Response) return auth;
 
   try {
     // Classi note: da studenti (classe confermata) ∪ stato esame già impostato.
@@ -76,8 +76,8 @@ export const onRequestGet: PagesFunction<SharedEnv> = async ({ request, env }) =
 };
 
 export const onRequestPut: PagesFunction<SharedEnv> = async ({ request, env }) => {
-  const unauth = await requireAuth(request, env, 'admin');
-  if (unauth) return unauth;
+  const auth = await requireSuperAdmin(request);
+  if (auth instanceof Response) return auth;
 
   let body: { class?: string; enabled?: boolean; level?: string };
   try {

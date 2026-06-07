@@ -1,4 +1,4 @@
-import { jsonError, jsonOk, requireAuth, type SharedEnv } from '../../../_lib/shared';
+import { jsonError, jsonOk, requireSuperAdmin, type SharedEnv } from '../../../_lib/shared';
 
 interface Body {
   type?: 'alert' | 'ammonizione' | 'annulla';
@@ -16,8 +16,8 @@ const ALLOWED = new Set(['alert', 'ammonizione', 'annulla']);
  * Lo studente riceve l'evento al successivo polling. Solo password docente.
  */
 export const onRequestPost: PagesFunction<SharedEnv> = async ({ params, request, env }) => {
-  const unauth = await requireAuth(request, env, 'admin');
-  if (unauth) return unauth;
+  const auth = await requireSuperAdmin(request);
+  if (auth instanceof Response) return auth;
 
   const id = String(params.id ?? '');
   if (!id) return jsonError(400, 'id mancante.');

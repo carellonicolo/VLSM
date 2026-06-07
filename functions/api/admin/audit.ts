@@ -2,7 +2,7 @@ import { jsonError, jsonOk, requireSuperAdmin, type SharedEnv } from '../../_lib
 
 /**
  * GET /api/admin/audit?limit=100 — log delle modifiche settings.
- * Solo docente (super-admin SSO).
+ * Solo password docente.
  */
 export const onRequestGet: PagesFunction<SharedEnv> = async ({ request, env }) => {
   const auth = await requireSuperAdmin(request);

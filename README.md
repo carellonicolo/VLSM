@@ -9,12 +9,14 @@ App web frontend-only per somministrare verifiche di **VLSM** (Variable Length S
 
 ## Funzionamento
 
-1. Lo studente accede tramite il **login centralizzato SSO** (`auth.nicolocarello.it`). Per svolgere una verifica ufficiale serve un account attivo con una **classe approvata** dal docente.
-2. Nome e classe sono presi dall'account SSO (nome bloccato, classe scelta tra quelle approvate); il sistema sorteggia una delle verifiche.
-3. Svolge la verifica con timer configurabile (default 60 min).
-4. Allo scadere, o cliccando "Termina", l'app corregge automaticamente e mostra il voto.
-5. Lo studente scarica un PDF con risposte, errori evidenziati, voto e spazio firme.
-6. Stampa, firma, consegna cartaceo al docente.
+1. Lo studente accede con il **login unico (SSO)** su `auth.nicolocarello.it` (registrazione, password e approvazione classe sono gestite lì). VLSM riceve l'identità via cookie condiviso `nc_session`.
+2. Il docente, sull'**IdP**, approva la **classe** dello studente; in VLSM **sblocca la verifica per quella classe** (tab "Classi & esame").
+3. Lo studente loggato con classe approvata avvia la verifica: il sistema sorteggia una verifica del livello scelto.
+4. Svolge la verifica con timer; il docente può seguirla **in tempo reale** e, se serve, inviare un **alert**, un'**ammonizione** o **interrompere/annullare** la prova.
+5. Allo scadere (o "Termina") l'app corregge in automatico, mostra il voto e genera un **PDF firmato** con risposte, errori, distrazioni e ammonizioni.
+6. Tutte le prove (verifiche ed esercitazioni) confluiscono nello **storico/andamento** dello studente, visibile anche al docente.
+
+> Gli studenti **senza classe approvata** possono comunque usare le **esercitazioni libere**, che vengono registrate nel loro storico. Il docente accede a `/admin` solo se è **super-admin** sull'IdP.
 
 ## Sviluppo
 
@@ -34,23 +36,35 @@ Crea un file `.env.local` (o configura le env var su Cloudflare):
 VITE_DURATA_DEFAULT_MIN=60
 ```
 
-**Comportamento del campo durata:**
-- `VITE_DURATA_DEFAULT_MIN=0` (o non impostata) → lo studente può scegliere liberamente la durata prima di iniziare (default mostrato: 60 min).
-- `VITE_DURATA_DEFAULT_MIN=N` con `N>0` → il campo durata è visibile ma **bloccato** sul valore `N`. Lo studente non può modificarlo. Per cambiarlo: aggiorni la env var su Cloudflare e fai un nuovo deploy.
+**Variabili server-side (Cloudflare Pages → Settings → Environment variables):**
+
+```
+VLSM_HMAC_SECRET=<random ≥32 char>  # secret per la firma HMAC dei PDF (Tipo: Secret)
+```
+
+> **Niente password**: l'autenticazione è delegata all'SSO centralizzato (vedi sezione
+> "Autenticazione"). Non servono più `VITE_APP_PASSWORD`, `VITE_ADMIN_PASSWORD`,
+> `ADMIN_PASSWORD`, `VLSM_AUTH_SECRET`, `STUDENT_EMAIL_DOMAIN`: puoi rimuoverle.
 
 ### Autenticazione (SSO centralizzato)
 
-L'app **non usa più password condivise**. L'accesso è gestito dall'Identity Provider centrale
-`auth.nicolocarello.it` (cookie condiviso `nc_session`, JWT ES256 verificato con la sola chiave
-pubblica via JWKS — nessun segreto nell'app). Dettagli e flusso: vedi `functions/_lib/sso.ts`,
-`functions/api/me.ts` e `src/lib/auth.ts`.
+L'app **non usa più password locali né account propri**. Identità e ruoli arrivano
+dall'Identity Provider `auth.nicolocarello.it` (cookie condiviso `nc_session`, JWT ES256
+verificato con la sola chiave pubblica via JWKS — nessun segreto nell'app). Vedi
+`functions/_lib/sso.ts`, `functions/_lib/student.ts`, `functions/api/me.ts`, `src/lib/auth.ts`.
 
-- **Studente**: per la verifica ufficiale deve essere loggato, attivo e con una **classe approvata**
-  dal docente. L'esercitazione libera resta **senza login**.
-- **Docente**: la modalità `/admin` è riservata agli utenti **super-admin** sull'IdP.
+- **Studente**: per la verifica ufficiale serve account **attivo** + **classe approvata** sull'IdP.
+  L'esercitazione libera richiede solo il login. La tabella `students` è una proiezione in sola
+  lettura dell'identità SSO (`id = userId SSO`), creata al primo accesso.
+- **Docente**: la console `/admin` è riservata agli utenti **super-admin** sull'IdP. Gestione
+  utenti/classi/password si fa sull'IdP (`auth.nicolocarello.it/admin`); in VLSM restano stato
+  esame per-classe, interventi, sessioni live e roster in sola lettura.
 - **Requisito dominio**: l'app deve essere servita da un sottodominio di `nicolocarello.it`
-  (es. `vlsm.nicolocarello.it`). Sui domini `*.pages.dev` il cookie condiviso non arriva e il login
-  non funziona.
+  (es. `vlsm.nicolocarello.it`). Sui domini `*.pages.dev` il cookie condiviso non arriva.
+
+**Comportamento del campo durata:**
+- `VITE_DURATA_DEFAULT_MIN=0` (o non impostata) → lo studente può scegliere liberamente la durata prima di iniziare (default mostrato: 60 min).
+- `VITE_DURATA_DEFAULT_MIN=N` con `N>0` → il campo durata è visibile ma **bloccato** sul valore `N`. Lo studente non può modificarlo. Per cambiarlo: aggiorni la env var su Cloudflare e fai un nuovo deploy.
 
 ## Deploy su Cloudflare Pages
 
@@ -67,7 +81,7 @@ pubblica via JWKS — nessun segreto nell'app). Dettagli e flusso: vedi `functio
    - `VITE_DURATA_DEFAULT_MIN` = `60` (o altro valore di default)
    - `VLSM_HMAC_SECRET` = secret server-side per firma HMAC (vedi sezione "Firma digitale" sotto). Tipo: **Secret**.
    - `NODE_VERSION` = `20`
-   - _Nessuna password_: l'autenticazione è delegata all'SSO (vedi sezione "Autenticazione").
+   - _Nessuna password_: l'autenticazione è delegata all'SSO (vedi "Autenticazione").
 5. **Deploy**. Collega il **custom domain `vlsm.nicolocarello.it`** (Pages → Custom domains): è necessario perché l'SSO usa il cookie condiviso su `.nicolocarello.it`. Sull'URL `*.pages.dev` il login non funziona.
 
 Ogni push su `main` rilascia automaticamente in Production. I push sugli altri branch generano una preview URL.
@@ -142,9 +156,14 @@ L'app sincronizza automaticamente le verifiche degli studenti su un database SQL
 2. **Applica gli schemi**
    - Apri il database appena creato → tab **Console**
    - Copia il contenuto di `migrations/0001_init.sql` e clicca **Execute**
-   - Poi `migrations/0002_settings.sql` e di nuovo **Execute** (aggiunge la
-     tabella `settings` per il pannello admin: master-switch della modalità
-     verifica + audit log).
+   - Poi `migrations/0002_settings.sql` e di nuovo **Execute** (tabella `settings`:
+     master-switch modalità verifica + audit log).
+   - Poi `migrations/0003_accounts.sql` e **Execute** (tabella `students` — ora
+     proiezione SSO in sola lettura —, sblocco verifica per-classe, interventi docente).
+     ⚠️ Va eseguito **una sola volta**: gli `ALTER TABLE` finali danno errore
+     se rilanciati (le colonne esistono già).
+   - Infine `migrations/0004_exam_level.sql` e **Execute** (livello della
+     verifica scelto dal docente per ogni classe). Anche questo una sola volta.
 
 3. **Collega il DB al progetto Pages**
    - Pages → progetto `vlsm` → **Settings** → **Functions** → sezione **D1 database bindings** → **Add binding**
@@ -153,10 +172,10 @@ L'app sincronizza automaticamente le verifiche degli studenti su un database SQL
    - Salva
 
 4. **Autenticazione: nessuna password da configurare**
-   - Le funzioni server (`/api/session/*`, `/api/sessions/*`, `/api/admin/*`)
-     autenticano via cookie SSO `nc_session` (vedi `functions/_lib/sso.ts`). Non
-     servono `APP_PASSWORD`/`ADMIN_PASSWORD`: gli endpoint studente verificano la
-     firma del cookie, quelli admin richiedono il flag **super-admin** sull'IdP.
+   - Le funzioni server (`/api/student/*`, `/api/sessions/*`, `/api/admin/*`, `/api/auth/me`)
+     autenticano via cookie SSO `nc_session` (vedi `functions/_lib/sso.ts`): gli endpoint
+     studente verificano la firma del cookie, quelli admin richiedono il flag **super-admin**
+     sull'IdP. Non servono `APP_PASSWORD`/`ADMIN_PASSWORD`.
    - Assicurati che l'app sia sul custom domain `vlsm.nicolocarello.it`.
 
 5. **Forza un nuovo deploy**
@@ -165,13 +184,13 @@ L'app sincronizza automaticamente le verifiche degli studenti su un database SQL
 ### Toggle verifica da admin
 
 In **Modalità docente** → tab **⚙️ Impostazioni** puoi:
-- **Attivare/disattivare la modalità verifica** in tempo reale (master-switch
-  globale): quando OFF gli studenti vedono la sezione "Svolgi la verifica"
-  disabilitata (esercitazioni libere e accesso docente restano sempre attivi).
+- **Attivare/disattivare la modalità verifica** in tempo reale (master-switch globale):
+  quando OFF gli studenti vedono la verifica disabilitata (esercitazioni libere e accesso
+  docente restano sempre attivi).
 - Consultare la **cronologia modifiche** (audit log con timestamp e IP).
 
-> Gli **utenti, le classi e le approvazioni** non si gestiscono più qui ma dalla
-> console super-admin dell'IdP: `https://auth.nicolocarello.it/admin`.
+> Gli **utenti, le classi e le approvazioni** si gestiscono sulla console super-admin
+> dell'IdP: `https://auth.nicolocarello.it/admin`.
 
 **Cosa succede senza setup:**
 - L'app continua a funzionare su localStorage
@@ -180,6 +199,46 @@ In **Modalità docente** → tab **⚙️ Impostazioni** puoi:
 - Nessuna interruzione del flusso normale
 
 **Privacy:** ai sensi del Regolamento UE 2016/679 (GDPR), il titolare del trattamento è la scuola. I dati raccolti (nome, classe, risposte, eventi distrazione) sono conservati a tempo indeterminato a meno che non li cancelli manualmente da Cloudflare D1 (Console → query `DELETE FROM sessions WHERE ...`) o dalla tab admin "Sessioni live" tramite il bottone 🗑 Elimina.
+
+## Account studenti, classi e controllo verifiche
+
+L'accesso a esercitazioni e verifiche richiede il **login SSO** (`auth.nicolocarello.it`).
+I calcolatori restano liberi.
+
+### Identità (SSO)
+- **Registrazione, login, password**: sull'IdP centrale. VLSM riceve l'identità dal cookie
+  condiviso `nc_session` e crea/aggiorna una **proiezione in sola lettura** nella tabella
+  `students` (`id = userId SSO`).
+- **Dashboard** (`/dashboard`): stato, accesso a esercitazione/verifica, e **andamento**
+  (medie, media per livello, grafico trend, distrazioni, ammonizioni).
+
+### Classi e gate verifica (lato docente)
+- Tab **👥 Studenti**: roster in **sola lettura** (stato, classe approvata, storico/andamento,
+  export CSV/PDF). Approvazione classe, sospensione, reset password si fanno sull'IdP
+  (`auth.nicolocarello.it/admin`).
+- Tab **🎛 Classi & esame**: sblocca la verifica **per singola classe** e scegli il
+  **livello** (fisso, casuale, o scelto dallo studente). Una verifica è possibile solo per
+  studenti **attivi con classe approvata** (sull'IdP) la cui classe è **attiva** in VLSM.
+  Esiste anche l'interruttore generale "Modalità verifica" (tab Impostazioni) come master.
+
+### Controllo della verifica in tempo reale
+Nella tab **🟢 Sessioni live**, per ogni verifica in corso il docente può:
+- **✉️ Alert** — messaggio momentaneo che compare allo studente;
+- **⚠️ Ammonisci** — ammonizione **registrata**: compare allo studente, sul **PDF** e nel
+  resoconto (nessuna escalation automatica: l'annullamento resta manuale);
+- **⛔ Annulla** — interrompe la prova: lo studente vede a schermo intero "Prova interrotta
+  dal docente", non può più rispondere, la sessione passa a stato `annullata` con motivo.
+
+Lo studente riceve gli interventi via **polling** ogni ~3 s (nessun WebSocket: resta nel
+free tier Cloudflare). Una prova annullata non può più essere salvata né ripresa dallo studente.
+
+### Sicurezza
+- Identità: cookie SSO **`nc_session`** (JWT **ES256**) verificato con la sola **chiave pubblica**
+  (JWKS dell'IdP). Nessun segreto nell'app, nessuna password locale.
+- Endpoint studente: verifica della firma del cookie ad ogni richiesta (economica, nessun
+  round-trip all'IdP). Il gate "classe approvata" usa il dato fresco dell'IdP (`/api/userinfo`)
+  solo all'avvio di una **nuova** verifica → niente perdita dati sui salvataggi frequenti.
+- API admin: riservate al **super-admin** SSO (flag `isSuperAdmin` dal dato fresco dell'IdP).
 
 ## Struttura
 
@@ -195,7 +254,7 @@ src/
 │   └── pickVerifica.ts         # sorteggio uniforme
 ├── hooks/{useSession,useTimer}.ts
 ├── components/
-│   ├── screens/{StudentInfo,Test,Review,Result}Screen.tsx + {Student,Admin}LoginGate.tsx (gate SSO)
+│   ├── screens/{StudentInfo,Test,Review,Result}Screen.tsx + AdminLoginGate.tsx (gate super-admin SSO)
 │   ├── exercises/EsercizioVlsmAlloc, EsercizioParametri, EsercizioAnalisiPiano
 │   ├── ui/{Header,Footer,TimerBadge}.tsx
 │   └── pdf/{PdfReport,PdfDownload}.tsx
@@ -231,13 +290,13 @@ Tutti i `.md` sono generati automaticamente da `scripts/generate-md.ts` (`npx ts
 
 ## Modalità d'uso
 
-L'app ha due modalità separate, accessibili dalla schermata iniziale.
+Tutto parte dal **login SSO** (account scolastico unico). I calcolatori restano liberi.
 
-### Verifica ufficiale (con login SSO)
-Lo studente accede con il proprio account (SSO). Servono account attivo e classe approvata dal docente; nome e classe arrivano dall'account. Sceglie il livello dal menù a tendina e il sistema sorteggia una delle 4 verifiche di quel livello. Il PDF finale ha gli spazi per la firma studente/docente.
+### Verifica ufficiale
+Disponibile solo a studenti **attivi con classe approvata** (sull'IdP) la cui **classe** ha l'esame **attivo** in VLSM. Lo studente sceglie il livello dal menù a tendina e il sistema sorteggia una delle verifiche di quel livello. Identità (nome/classe) presa dall'account SSO. Il PDF finale ha gli spazi per la firma studente/docente e riporta distrazioni ed eventuali ammonizioni.
 
-### Esercitazione libera (senza login)
-Card "🎯 Esercitazione" sulla home: nessun login richiesto. Lo studente sceglie il livello e il sistema sorteggia una delle 2 simulazioni del livello. Il PDF mostra un banner "ESERCITAZIONE LIBERA — non vale come verifica ufficiale" e non ha gli spazi firma.
+### Esercitazione libera
+Disponibile a **qualunque studente loggato** (anche senza classe approvata). Lo studente sceglie il livello e il sistema sorteggia una delle simulazioni del livello. Il PDF mostra un banner "ESERCITAZIONE LIBERA — non vale come verifica ufficiale" e non ha gli spazi firma. Le esercitazioni entrano comunque nello storico personale.
 
 ### Livelli di difficoltà
 

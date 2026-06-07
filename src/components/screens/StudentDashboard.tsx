@@ -4,7 +4,6 @@ import { AppShell } from '../ui/AppShell';
 import { ProgressView } from '../dashboard/ProgressView';
 import { useAuth } from '../../hooks/useAuth';
 import { studentHistory, type HistorySession } from '../../lib/studentApi';
-import { apiChangePassword } from '../../lib/auth';
 
 function StatusBanner() {
   const { student, exam, refresh } = useAuth();
@@ -39,74 +38,6 @@ function StatusBanner() {
         🔄 Controlla di nuovo
       </button>
     </div>
-  );
-}
-
-function ChangePasswordCard({ forced }: { forced: boolean }) {
-  const { refresh } = useAuth();
-  const [open, setOpen] = useState(forced);
-  const [current, setCurrent] = useState('');
-  const [next, setNext] = useState('');
-  const [confirm, setConfirm] = useState('');
-  const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setMsg(null);
-    if (next.length < 8) return setMsg({ type: 'err', text: 'La nuova password deve avere almeno 8 caratteri.' });
-    if (next !== confirm) return setMsg({ type: 'err', text: 'Le due password non corrispondono.' });
-    setBusy(true);
-    const res = await apiChangePassword(current, next);
-    setBusy(false);
-    if (res.ok) {
-      setMsg({ type: 'ok', text: 'Password aggiornata.' });
-      setCurrent(''); setNext(''); setConfirm('');
-      void refresh();
-    } else {
-      setMsg({ type: 'err', text: res.error ?? 'Errore.' });
-    }
-  };
-
-  if (!open) {
-    return (
-      <div className="card">
-        <button className="btn btn-secondary" type="button" onClick={() => setOpen(true)}>🔑 Cambia password</button>
-      </div>
-    );
-  }
-
-  return (
-    <form className="card" onSubmit={submit}>
-      <h3 style={{ marginTop: 0 }}>🔑 Cambia password</h3>
-      {forced && (
-        <div className="warn-banner" style={{ marginBottom: '0.75rem' }}>
-          <strong>Il docente ha reimpostato la tua password.</strong>
-          <p style={{ margin: '0.3rem 0 0', fontSize: '0.88rem' }}>Scegline una nuova per continuare.</p>
-        </div>
-      )}
-      {!forced && (
-        <div className="field">
-          <label htmlFor="cp-cur">Password attuale</label>
-          <input id="cp-cur" type="password" value={current} onChange={(e) => setCurrent(e.target.value)} autoComplete="current-password" />
-        </div>
-      )}
-      <div className="field-row">
-        <div className="field">
-          <label htmlFor="cp-new">Nuova password (min 8)</label>
-          <input id="cp-new" type="password" value={next} onChange={(e) => setNext(e.target.value)} autoComplete="new-password" />
-        </div>
-        <div className="field">
-          <label htmlFor="cp-confirm">Conferma</label>
-          <input id="cp-confirm" type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" />
-        </div>
-      </div>
-      {msg && <div className={msg.type === 'ok' ? 'muted' : 'error-msg'} style={msg.type === 'ok' ? { color: 'var(--success)', marginBottom: '0.5rem' } : { marginBottom: '0.5rem' }}>{msg.text}</div>}
-      <div className="actions">
-        <button className="btn" type="submit" disabled={busy}>{busy ? 'Salvataggio…' : 'Salva password'}</button>
-        {!forced && <button className="btn btn-secondary" type="button" onClick={() => setOpen(false)}>Chiudi</button>}
-      </div>
-    </form>
   );
 }
 
@@ -163,7 +94,6 @@ export function StudentDashboard() {
         </div>
       </div>
 
-      {student.mustChangePassword && <ChangePasswordCard forced />}
       <StatusBanner />
 
       <div className="dash-actions">
@@ -207,8 +137,6 @@ export function StudentDashboard() {
           subject={{ name: student.fullName, subtitle: `${student.email}${student.class ? ` · ${student.class}` : ''}` }}
         />
       )}
-
-      {!student.mustChangePassword && <ChangePasswordCard forced={false} />}
     </AppShell>
   );
 }

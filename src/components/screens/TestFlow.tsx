@@ -3,14 +3,18 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useSession } from '../../hooks/useSession';
 import { useTheme } from '../../hooks/useTheme';
 import { useFocusMonitor } from '../../hooks/useFocusMonitor';
-import { useCloudSync } from '../../hooks/useCloudSync';
+import { useStudentSync } from '../../hooks/useStudentSync';
+import { useTeacherCommands } from '../../hooks/useTeacherCommands';
+import { useAuth } from '../../hooks/useAuth';
+import { redirectToLogin } from '../../lib/auth';
 import { SyncIndicator } from '../ui/SyncIndicator';
-import type { RecoverableSession } from '../../lib/cloudSync';
-import type { MotivoConsegna, VerificaId } from '../../types/domain';
+import type { RecoverableSession } from '../../lib/studentApi';
+import type { DatiStudente, MotivoConsegna, VerificaId } from '../../types/domain';
 import { StudentInfoScreen } from './StudentInfoScreen';
 import { TestScreen } from './TestScreen';
 import { ReviewScreen } from './ReviewScreen';
 import { ResultScreen } from './ResultScreen';
+import { InterruptedOverlay, TeacherMessageModal } from './ExamInterventions';
 import { Header } from '../ui/Header';
 import { Footer } from '../ui/Footer';
 import { ThemeToggle } from '../ui/ThemeToggle';
@@ -19,13 +23,13 @@ import { getVerifica } from '../../data/verifiche';
 import { gradeVerifica } from '../../lib/grading';
 import { buildSommario } from '../../lib/pdfData';
 import { signSommario } from '../../lib/pdfSign';
-import { StudentLoginGate } from './StudentLoginGate';
 
 interface Props {
   categoria: 'verifica' | 'esercitazione';
 }
 
 export function TestFlow({ categoria }: Props) {
+  const { student, exam, loading } = useAuth();
   const {
     session,
     startTest,
@@ -40,9 +44,6 @@ export function TestFlow({ categoria }: Props) {
   } = useSession();
   const { theme, toggle: toggleTheme } = useTheme();
   const navigate = useNavigate();
-  // Auth SSO per la verifica ufficiale. Per l'esercitazione non serve login.
-  const [auth, setAuth] = useState<{ name: string; approvedClasses: string[] } | null>(null);
-  const studentLogged = categoria === 'esercitazione' || auth !== null;
 
   const themeToggle = (
     <>
@@ -51,28 +52,38 @@ export function TestFlow({ categoria }: Props) {
     </>
   );
 
-  // Allinea la categoria della sessione corrente con la route.
+  // Identità presa dall'account (non più digitata dallo studente).
+  const studente: DatiStudente | null = useMemo(
+    () => (student ? { nome: student.fullName, classe: student.class || student.declaredClass || '' } : null),
+    [student]
+  );
+
+  // Allinea la categoria della sessione con la route.
   useEffect(() => {
-    if (session.categoria !== categoria) {
-      setCategoria(categoria);
-    }
+    if (session.categoria !== categoria) setCategoria(categoria);
   }, [categoria, session.categoria, setCategoria]);
 
-  // Anti-cheat solo durante la verifica vera e propria.
-  const monitorActive = studentLogged && session.phase === 'test' && categoria === 'verifica';
+  // Evita che la sessione di un altro account resti su questo browser.
+  useEffect(() => {
+    if (studente && session.studente && session.studente.nome !== studente.nome && session.phase !== 'info') {
+      reset();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [studente?.nome]);
+
+  // Anti-cheat: solo durante la verifica vera e propria.
+  const monitorActive = session.phase === 'test' && categoria === 'verifica';
   useFocusMonitor(monitorActive, addEventoFocus);
 
-  // Cloud sync solo per verifiche ufficiali.
+  const [annulled, setAnnulled] = useState(false);
+  const [annullataMotivo, setAnnullataMotivo] = useState<string | null>(null);
+
+  // Sync server (verifiche + esercitazioni → storico personale).
   const cloudEnabled =
-    studentLogged &&
-    categoria === 'verifica' &&
-    session.phase !== 'info' &&
-    !!session.studente &&
-    !!session.verificaId;
+    !!student && session.phase !== 'info' && !!session.verificaId && !!session.answers && !annulled;
   const cloudState = session.phase === 'result' ? 'consegnata' : 'in_progress';
-  const cloud = useCloudSync({
+  const cloud = useStudentSync({
     enabled: cloudEnabled,
-    studente: session.studente,
     categoria,
     verificaId: session.verificaId,
     verificaTitolo: session.verificaId ? getVerifica(session.verificaId)?.titolo : undefined,
@@ -84,7 +95,19 @@ export function TestFlow({ categoria }: Props) {
     eventiFocus: session.eventiFocus ?? [],
     state: cloudState,
     esito: session.esito,
+    onAnnullata: () => setAnnulled(true),
   });
+
+  // Comandi docente in tempo reale (solo durante la verifica in corso).
+  const commandsActive = categoria === 'verifica' && session.phase === 'test' && !annulled;
+  const commands = useTeacherCommands(commandsActive);
+
+  useEffect(() => {
+    if (commands.annulled && !annulled) {
+      setAnnulled(true);
+      setAnnullataMotivo(commands.annullataMotivo);
+    }
+  }, [commands.annulled, commands.annullataMotivo, annulled]);
 
   const handleResume = (s: RecoverableSession) => {
     resumeFromCloud({
@@ -109,28 +132,19 @@ export function TestFlow({ categoria }: Props) {
 
   const submit = useCallback(
     async (motivo: MotivoConsegna) => {
-      if (!verifica || !session.answers || !session.studente) return;
+      if (!verifica || !session.answers || !session.studente || annulled) return;
       setSubmitError(null);
       let esito;
       try {
         const startedAt = session.startedAt ? new Date(session.startedAt) : undefined;
         const eventiFocus = session.eventiFocus ?? [];
-        esito = gradeVerifica(
-          verifica,
-          session.answers,
-          session.studente,
-          motivo,
-          new Date(),
-          startedAt,
-          eventiFocus
-        );
+        esito = gradeVerifica(verifica, session.answers, session.studente, motivo, new Date(), startedAt, eventiFocus);
+        if (commands.ammonizioni.length > 0) esito.ammonizioni = commands.ammonizioni;
       } catch (e) {
         // eslint-disable-next-line no-console
         console.error('gradeVerifica failed', e);
         const msg = e instanceof Error ? e.message : String(e);
-        setSubmitError(
-          `Errore nel calcolo del voto: ${msg}. Le tue risposte sono salvate. Riprova o avvisa il docente.`
-        );
+        setSubmitError(`Errore nel calcolo del voto: ${msg}. Le tue risposte sono salvate. Riprova o avvisa il docente.`);
         return;
       }
 
@@ -144,35 +158,83 @@ export function TestFlow({ categoria }: Props) {
       }
       setSigning(false);
 
-      const finalEsito = sig
-        ? { ...esito, signature: sig.signature, signedAt: sig.signedAt }
-        : esito;
+      const finalEsito = sig ? { ...esito, signature: sig.signature, signedAt: sig.signedAt } : esito;
       try {
         setEsito(finalEsito);
         void cloud.flush();
       } catch (e) {
         // eslint-disable-next-line no-console
         console.error('setEsito failed', e);
-        setSubmitError(
-          'Errore nel salvataggio della consegna. Riprova oppure ricarica la pagina (i dati restano salvati).'
-        );
+        setSubmitError('Errore nel salvataggio della consegna. Riprova oppure ricarica la pagina (i dati restano salvati).');
       }
     },
-    [verifica, session.answers, session.studente, session.startedAt, session.eventiFocus, setEsito, cloud]
+    [verifica, session.answers, session.studente, session.startedAt, session.eventiFocus, annulled, commands.ammonizioni, setEsito, cloud]
   );
 
   useEffect(() => {
-    if (session.phase === 'test' && session.deadlineMs && Date.now() >= session.deadlineMs) {
+    if (!annulled && session.phase === 'test' && session.deadlineMs && Date.now() >= session.deadlineMs) {
       submit('timeout');
     }
-  }, [session.phase, session.deadlineMs, submit]);
+  }, [session.phase, session.deadlineMs, submit, annulled]);
 
-  // Gate SSO per la modalità verifica.
-  if (categoria === 'verifica' && !auth && session.phase !== 'result') {
+  const exitToDashboard = () => {
+    reset();
+    navigate('/dashboard');
+  };
+
+  // ---- Render ----
+
+  if (loading) {
     return (
       <div className="shell">
         <Header actions={themeToggle} />
-        <StudentLoginGate onAuthenticated={setAuth} />
+        <div className="card">Caricamento…</div>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!student || !studente) {
+    // Fallback: RequireAuth in App.tsx già protegge la route; qui rimandiamo al login SSO.
+    redirectToLogin();
+    return (
+      <div className="shell">
+        <Header actions={themeToggle} />
+        <div className="card">Reindirizzamento al login…</div>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Overlay di prova interrotta: copre tutto finché lo studente non esce.
+  if (annulled) {
+    return (
+      <div className="shell">
+        <Header actions={themeToggle} />
+        <InterruptedOverlay motivo={annullataMotivo} onExit={exitToDashboard} />
+        <Footer />
+      </div>
+    );
+  }
+
+  // Gate verifica: serve account convalidato + classe abilitata.
+  if (categoria === 'verifica' && session.phase !== 'result' && !exam?.available) {
+    const reason =
+      student.status !== 'validated'
+        ? 'Il tuo account non è ancora stato convalidato dal docente.'
+        : `La modalità verifica non è attiva per la tua classe${student.class ? ` (${student.class})` : ''}.`;
+    return (
+      <div className="shell">
+        <Header actions={themeToggle} />
+        <div className="card" style={{ maxWidth: 560, margin: '2rem auto', textAlign: 'center' }}>
+          <div style={{ fontSize: '2.6rem' }} aria-hidden>🔒</div>
+          <h2 style={{ marginTop: '0.4rem' }}>Verifica non disponibile</h2>
+          <p className="muted">{reason}</p>
+          <div className="actions" style={{ justifyContent: 'center', flexWrap: 'wrap', marginTop: '1rem' }}>
+            <Link to="/esercitazione" className="btn">🎯 Vai all'esercitazione</Link>
+            <Link to="/dashboard" className="btn btn-secondary">Torna alla dashboard</Link>
+          </div>
+        </div>
         <Footer />
       </div>
     );
@@ -183,13 +245,13 @@ export function TestFlow({ categoria }: Props) {
       <div className="shell">
         <Header actions={themeToggle} />
         <div className="shell-back-row">
-          <Link to="/" className="back-link">← Torna alla home</Link>
+          <Link to="/dashboard" className="back-link">← Torna alla dashboard</Link>
         </div>
         <StudentInfoScreen
+          studente={studente}
           durataMin={session.durataMin}
           categoria={categoria}
-          lockedNome={categoria === 'verifica' ? auth?.name : undefined}
-          approvedClasses={categoria === 'verifica' ? auth?.approvedClasses : undefined}
+          examLevel={categoria === 'verifica' ? exam?.level ?? null : null}
           onStart={(s, v, d) => startTest(s, v, d)}
           onResume={handleResume}
         />
@@ -202,11 +264,12 @@ export function TestFlow({ categoria }: Props) {
     return (
       <div className="shell">
         <Header actions={themeToggle} />
-        {categoria === 'verifica' && (
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem' }}>
-            <SyncIndicator status={cloud.status} lastSyncAt={cloud.lastSyncAt} />
-          </div>
+        {commands.current && (
+          <TeacherMessageModal type={commands.current.type} message={commands.current.message} onDismiss={commands.dismiss} />
         )}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem' }}>
+          <SyncIndicator status={cloud.status} lastSyncAt={cloud.lastSyncAt} />
+        </div>
         <TestScreen
           verifica={verifica}
           answers={session.answers}
@@ -248,13 +311,7 @@ export function TestFlow({ categoria }: Props) {
     return (
       <div className="shell">
         <Header actions={themeToggle} />
-        <ResultScreen
-          esito={session.esito}
-          onNuovaSessione={() => {
-            reset();
-            navigate('/');
-          }}
-        />
+        <ResultScreen esito={session.esito} onNuovaSessione={exitToDashboard} />
         <Footer />
       </div>
     );

@@ -1,13 +1,13 @@
-import { jsonError, jsonOk } from '../../_lib/shared';
-import { authenticateStudent, type AuthEnv } from '../../_lib/auth';
+import { jsonError, jsonOk, type SharedEnv } from '../../_lib/shared';
+import { loadStudentFromSession } from '../../_lib/student';
 
 /**
  * GET /api/student/history — storico completo (verifiche + esercitazioni)
  * dello studente loggato, per la dashboard "andamento". Le statistiche
  * (medie, trend) vengono calcolate lato client da questa lista.
  */
-export const onRequestGet: PagesFunction<AuthEnv> = async ({ request, env }) => {
-  const auth = await authenticateStudent(request, env);
+export const onRequestGet: PagesFunction<SharedEnv> = async ({ request, env }) => {
+  const auth = await loadStudentFromSession(request, env);
   if (auth instanceof Response) return auth;
 
   try {
@@ -32,4 +32,4 @@ export const onRequestGet: PagesFunction<AuthEnv> = async ({ request, env }) => 
   }
 };
 
-export const onRequest: PagesFunction<AuthEnv> = () => new Response('Method not allowed', { status: 405 });
+export const onRequest: PagesFunction<SharedEnv> = () => new Response('Method not allowed', { status: 405 });

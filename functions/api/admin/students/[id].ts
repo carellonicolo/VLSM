@@ -1,14 +1,13 @@
-import { jsonError, jsonOk, requireAuth, type SharedEnv } from '../../../_lib/shared';
+import { jsonError, jsonOk, requireSuperAdmin, type SharedEnv } from '../../../_lib/shared';
 
 /**
- * GET    /api/admin/students/:id → profilo + storico completo dello studente.
- * DELETE /api/admin/students/:id → elimina l'account (le sue sessioni restano
- *                                  come 'legacy' con student_id azzerato).
- * Solo password docente.
+ * GET /api/admin/students/:id → profilo (proiezione SSO) + storico verifiche.
+ * Solo docente (super-admin SSO). Roster in sola lettura: la gestione account
+ * (creazione/sospensione/eliminazione) è sull'IdP auth.nicolocarello.it.
  */
 export const onRequestGet: PagesFunction<SharedEnv> = async ({ params, request, env }) => {
-  const unauth = await requireAuth(request, env, 'admin');
-  if (unauth) return unauth;
+  const auth = await requireSuperAdmin(request);
+  if (auth instanceof Response) return auth;
 
   const id = String(params.id ?? '');
   if (!id) return jsonError(400, 'id mancante.');
@@ -35,22 +34,6 @@ export const onRequestGet: PagesFunction<SharedEnv> = async ({ params, request, 
     ).bind(id).all();
 
     return jsonOk({ student, sessions: results ?? [] });
-  } catch (e) {
-    return jsonError(500, `Errore DB: ${e instanceof Error ? e.message : String(e)}`);
-  }
-};
-
-export const onRequestDelete: PagesFunction<SharedEnv> = async ({ params, request, env }) => {
-  const unauth = await requireAuth(request, env, 'admin');
-  if (unauth) return unauth;
-
-  const id = String(params.id ?? '');
-  if (!id) return jsonError(400, 'id mancante.');
-
-  try {
-    await env.DB.prepare(`UPDATE sessions SET student_id = NULL WHERE student_id = ?`).bind(id).run();
-    await env.DB.prepare(`DELETE FROM students WHERE id = ?`).bind(id).run();
-    return jsonOk({ ok: true });
   } catch (e) {
     return jsonError(500, `Errore DB: ${e instanceof Error ? e.message : String(e)}`);
   }

@@ -2,7 +2,7 @@ import { jsonError, jsonOk, requireSuperAdmin, type SharedEnv } from '../../_lib
 import { getSetting } from '../../_lib/settings';
 
 /**
- * GET /api/admin/settings — settings applicative correnti per la console docente.
+ * GET /api/admin/settings — settings applicative per la console docente.
  * Con l'SSO l'unica impostazione gestita qui è il master-switch delle verifiche.
  * Solo docente (super-admin SSO).
  */

@@ -16,7 +16,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
     hasHmacSecret: typeof env.VLSM_HMAC_SECRET === 'string' && env.VLSM_HMAC_SECRET.length > 0,
   };
 
-  // SSO: verifica raggiungibilità del JWKS e (se presente) validità del cookie.
+  // SSO: raggiungibilità del JWKS e (se presente) validità del cookie di sessione.
   try {
     const res = await fetch('https://auth.nicolocarello.it/.well-known/jwks.json');
     info.ssoJwksReachable = res.ok;
@@ -35,7 +35,6 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
     info.sessionValid = false;
   }
 
-  // Tenta una query banale per verificare la connessione e lo schema.
   if (info.hasDB) {
     try {
       const row = await env.DB.prepare(

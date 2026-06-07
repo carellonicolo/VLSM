@@ -1,28 +1,31 @@
-import { jsonError, jsonOk } from '../../_lib/shared';
-import { authenticateStudent, publicStudent, type AuthEnv } from '../../_lib/auth';
+import { jsonError, jsonOk, type SharedEnv } from '../../_lib/shared';
+import { loadStudentFromSession, fetchSsoInfo, syncStudentFromInfo, publicStudent } from '../../_lib/student';
 import { getClassExam } from '../../_lib/classes';
 import { getVerificaEnabled } from '../../_lib/settings';
 
 /**
- * GET /api/auth/me — profilo dello studente loggato + stato esame.
- *   exam.enabledForClass → master globale && classe abilitata (a prescindere dalla convalida)
- *   exam.available       → enabledForClass && studente validato (può davvero iniziare)
+ * GET /api/auth/me — profilo dello studente loggato (via SSO) + stato esame.
+ *   exam.enabledForClass → master globale && classe abilitata
+ *   exam.available       → enabledForClass && studente attivo con classe approvata sull'IdP
+ *
+ * Qui si usa il dato fresco dell'IdP (fetchSsoInfo) per aggiornare classe/stato
+ * della proiezione `students`: è chiamata all'avvio dell'app, non è frequente.
  */
-export const onRequestGet: PagesFunction<AuthEnv> = async ({ request, env }) => {
-  const auth = await authenticateStudent(request, env);
-  if (auth instanceof Response) return auth;
+export const onRequestGet: PagesFunction<SharedEnv> = async ({ request, env }) => {
+  const row = await loadStudentFromSession(request, env);
+  if (row instanceof Response) return row;
 
   try {
-    const [master, classExam] = await Promise.all([
-      getVerificaEnabled(env),
-      getClassExam(env, auth.class),
-    ]);
+    const info = await fetchSsoInfo(request);
+    if (info) await syncStudentFromInfo(env, row, info);
+
+    const [master, classExam] = await Promise.all([getVerificaEnabled(env), getClassExam(env, row.class)]);
     const enabledForClass = !!master && classExam.enabled;
     return jsonOk({
-      student: publicStudent(auth),
+      student: publicStudent(row),
       exam: {
         enabledForClass,
-        available: enabledForClass && auth.status === 'validated',
+        available: enabledForClass && row.status === 'validated',
         level: classExam.level,
       },
     });
@@ -31,4 +34,4 @@ export const onRequestGet: PagesFunction<AuthEnv> = async ({ request, env }) => 
   }
 };
 
-export const onRequest: PagesFunction<AuthEnv> = () => new Response('Method not allowed', { status: 405 });
+export const onRequest: PagesFunction<SharedEnv> = () => new Response('Method not allowed', { status: 405 });

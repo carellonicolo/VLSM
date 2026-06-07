@@ -2,7 +2,7 @@ import { jsonError, jsonOk, requireSuperAdmin, type SharedEnv } from '../../_lib
 
 /**
  * GET /api/sessions/list?state=in_progress|consegnata|abbandonata|all
- * Lista tutte le sessioni filtrate per stato. Solo docente (super-admin SSO).
+ * Lista tutte le sessioni filtrate per stato. Richiede password docente.
  */
 export const onRequestGet: PagesFunction<SharedEnv> = async ({ request, env }) => {
   const auth = await requireSuperAdmin(request);
