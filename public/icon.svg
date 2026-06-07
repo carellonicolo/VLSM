@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="VLSM Test">
+  <!-- Sfondo a tutto campo: sicuro per icone "maskable" (la crop mostra sempre il blu). -->
+  <rect width="512" height="512" fill="#0b3d91"/>
+  <rect x="48" y="48" width="416" height="416" rx="84" fill="#1e5fc4"/>
+  <text x="256" y="248" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="118" font-weight="800" fill="#ffffff">VLSM</text>
+  <text x="256" y="350" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="66" font-weight="700" fill="#cfe0ff">Test</text>
+</svg>

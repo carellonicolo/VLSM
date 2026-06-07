@@ -71,8 +71,9 @@ export function ClassesTab({ active }: Props) {
           <div>
             <h3 style={{ marginTop: 0, marginBottom: '0.25rem' }}>🎛 Classi &amp; modalità esame</h3>
             <div className="muted" style={{ fontSize: '0.85rem' }}>
-              Sblocca la verifica per una classe alla volta e scegli il <strong>livello</strong>. Solo gli
-              studenti <strong>convalidati</strong> di una classe <strong>attiva</strong> possono iniziare.
+              Sblocca la verifica per una classe alla volta e scegli il <strong>livello</strong>. Possono
+              iniziare solo gli studenti <strong>attivi con classe approvata</strong> (sull'IdP) di una
+              classe <strong>attiva</strong> qui. L'elenco classi è dinamico dal DB.
             </div>
           </div>
           <button className="btn btn-secondary" type="button" onClick={() => void reload()} disabled={loading}>
@@ -90,7 +91,8 @@ export function ClassesTab({ active }: Props) {
 
       {classes.length === 0 && !error && (
         <div className="card muted" style={{ textAlign: 'center' }}>
-          Nessuna classe disponibile. Le classi compaiono qui quando convalidi degli studenti assegnando loro una classe.
+          Nessuna classe disponibile. Le classi compaiono qui automaticamente quando gli studenti
+          accedono con una <strong>classe approvata</strong> sull'IdP (auth.nicolocarello.it).
         </div>
       )}
 

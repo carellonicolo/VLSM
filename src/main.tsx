@@ -20,3 +20,13 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     </ErrorBoundary>
   </React.StrictMode>
 );
+
+// PWA: registra il service worker solo in produzione (in dev darebbe fastidio
+// alla cache/HMR). Il SW non tocca mai /api (vedi public/sw.js).
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {
+      /* registrazione non disponibile: l'app funziona comunque */
+    });
+  });
+}

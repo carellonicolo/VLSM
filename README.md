@@ -220,6 +220,8 @@ I calcolatori restano liberi.
   **livello** (fisso, casuale, o scelto dallo studente). Una verifica è possibile solo per
   studenti **attivi con classe approvata** (sull'IdP) la cui classe è **attiva** in VLSM.
   Esiste anche l'interruttore generale "Modalità verifica" (tab Impostazioni) come master.
+  L'elenco classi è **dinamico dal DB** (compaiono man mano che gli studenti accedono con una
+  classe approvata): il docente non digita mai i nomi classe → combaciano sempre con l'IdP.
 
 ### Controllo della verifica in tempo reale
 Nella tab **🟢 Sessioni live**, per ogni verifica in corso il docente può:

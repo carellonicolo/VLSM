@@ -12,7 +12,7 @@ import { IPv6SubnetVisualizer } from '@/components/calcolatori/IPv6SubnetVisuali
 import { Header } from '../ui/Header';
 import { Footer } from '../ui/Footer';
 import { ThemeToggle } from '../ui/ThemeToggle';
-import { DashboardLink } from '../ui/DashboardLink';
+import { HomeLink } from '../ui/HomeLink';
 import { useTheme } from '../../hooks/useTheme';
 
 const GuideModal = lazy(() =>
@@ -47,7 +47,7 @@ export function CalcolatoriPage() {
       <Header
         actions={
           <>
-            <DashboardLink />
+            <HomeLink />
             <ThemeToggle theme={theme} onToggle={toggle} />
           </>
         }

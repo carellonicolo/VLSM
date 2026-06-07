@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   cloudGetStudent,
+  cloudListClasses,
   cloudListStudents,
   type AdminStudent,
   type AdminStudentDetail,
@@ -41,6 +42,7 @@ export function StudentsTab({ active }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState('all');
   const [classFilter, setClassFilter] = useState('');
+  const [classOptions, setClassOptions] = useState<string[]>([]);
   const [search, setSearch] = useState('');
   const [detail, setDetail] = useState<AdminStudentDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -61,6 +63,16 @@ export function StudentsTab({ active }: Props) {
   useEffect(() => {
     if (active) void reload();
   }, [active, reload]);
+
+  // Elenco classi per il filtro: dinamico dal DB (classi degli studenti +
+  // classi con stato esame configurato). Si aggiorna man mano che gli studenti
+  // accedono / ottengono una classe approvata sull'IdP.
+  useEffect(() => {
+    if (!active) return;
+    void cloudListClasses().then((res) => {
+      if (res.ok) setClassOptions(res.classes.map((c) => c.class));
+    });
+  }, [active]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -141,13 +153,17 @@ export function StudentsTab({ active }: Props) {
               placeholder="🔎 Cerca nome o email"
               style={{ width: 190 }}
             />
-            <input
-              type="text"
+            <select
               value={classFilter}
               onChange={(e) => setClassFilter(e.target.value)}
-              placeholder="Filtra per classe"
-              style={{ width: 140 }}
-            />
+              style={{ width: 'auto' }}
+              title="Filtra per classe"
+            >
+              <option value="">Tutte le classi</option>
+              {classOptions.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
             <button className="btn btn-secondary" type="button" onClick={() => void reload()} disabled={loading}>
               {loading ? '⏳' : '🔄'} Aggiorna
             </button>

@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Header } from './Header';
 import { Footer } from './Footer';
 import { ThemeToggle } from './ThemeToggle';
-import { DashboardLink } from './DashboardLink';
+import { HomeLink } from './HomeLink';
 import { useTheme } from '../../hooks/useTheme';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -48,7 +48,7 @@ export function AppShell({ children, back, hideAccount }: Props) {
         actions={
           <>
             {!hideAccount && <AccountMenu />}
-            <DashboardLink />
+            <HomeLink />
             <ThemeToggle theme={theme} onToggle={toggle} />
           </>
         }

@@ -4,7 +4,7 @@ import { useTheme } from '../../hooks/useTheme';
 import { Header } from '../ui/Header';
 import { Footer } from '../ui/Footer';
 import { ThemeToggle } from '../ui/ThemeToggle';
-import { DashboardLink } from '../ui/DashboardLink';
+import { HomeLink } from '../ui/HomeLink';
 import { AdminLoginGate } from './AdminLoginGate';
 
 const AdminScreen = lazy(() =>
@@ -18,7 +18,7 @@ export function AdminPage() {
 
   const themeToggle = (
     <>
-      <DashboardLink />
+      <HomeLink />
       <ThemeToggle theme={theme} onToggle={toggle} />
     </>
   );

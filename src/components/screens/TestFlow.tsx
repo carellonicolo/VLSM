@@ -18,7 +18,7 @@ import { InterruptedOverlay, TeacherMessageModal } from './ExamInterventions';
 import { Header } from '../ui/Header';
 import { Footer } from '../ui/Footer';
 import { ThemeToggle } from '../ui/ThemeToggle';
-import { DashboardLink } from '../ui/DashboardLink';
+import { HomeLink } from '../ui/HomeLink';
 import { getVerifica } from '../../data/verifiche';
 import { gradeVerifica } from '../../lib/grading';
 import { buildSommario } from '../../lib/pdfData';
@@ -47,7 +47,7 @@ export function TestFlow({ categoria }: Props) {
 
   const themeToggle = (
     <>
-      <DashboardLink />
+      <HomeLink />
       <ThemeToggle theme={theme} onToggle={toggleTheme} />
     </>
   );
