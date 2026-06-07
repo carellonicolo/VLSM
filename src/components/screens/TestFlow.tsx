@@ -19,6 +19,7 @@ import { Header } from '../ui/Header';
 import { Footer } from '../ui/Footer';
 import { ThemeToggle } from '../ui/ThemeToggle';
 import { HomeLink } from '../ui/HomeLink';
+import { AccountMenu } from '../ui/AccountMenu';
 import { getVerifica } from '../../data/verifiche';
 import { gradeVerifica } from '../../lib/grading';
 import { buildSommario } from '../../lib/pdfData';
@@ -47,6 +48,7 @@ export function TestFlow({ categoria }: Props) {
 
   const themeToggle = (
     <>
+      <AccountMenu />
       <HomeLink />
       <ThemeToggle theme={theme} onToggle={toggleTheme} />
     </>

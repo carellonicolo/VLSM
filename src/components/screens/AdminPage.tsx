@@ -5,6 +5,7 @@ import { Header } from '../ui/Header';
 import { Footer } from '../ui/Footer';
 import { ThemeToggle } from '../ui/ThemeToggle';
 import { HomeLink } from '../ui/HomeLink';
+import { AccountMenu } from '../ui/AccountMenu';
 import { AdminLoginGate } from './AdminLoginGate';
 
 const AdminScreen = lazy(() =>
@@ -18,6 +19,7 @@ export function AdminPage() {
 
   const themeToggle = (
     <>
+      <AccountMenu />
       <HomeLink />
       <ThemeToggle theme={theme} onToggle={toggle} />
     </>

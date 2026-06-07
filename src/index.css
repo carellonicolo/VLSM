@@ -526,6 +526,11 @@ input[type='text'],
 input[type='email'],
 input[type='password'],
 input[type='number'],
+input[type='search'],
+input[type='tel'],
+input[type='url'],
+input[type='date'],
+textarea,
 select {
   padding: 0.5rem 0.7rem;
   border: 1px solid var(--border);
@@ -537,11 +542,27 @@ select {
   color: var(--fg);
 }
 
-input:disabled {
+/* Normalizza il campo di ricerca (su Safari/WebKit ha un look nativo a pillola). */
+input[type='search'] {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--muted);
+  opacity: 0.85;
+}
+
+input:disabled,
+select:disabled,
+textarea:disabled {
   opacity: 0.7;
 }
 
-input:focus {
+input:focus,
+select:focus,
+textarea:focus {
   outline: 2px solid var(--primary);
   outline-offset: -1px;
   border-color: var(--primary);
@@ -1522,4 +1543,91 @@ label {
   color: var(--fg);
 }
 .preset-chip:hover { border-color: var(--primary); background: var(--input-focus-bg); }
+
+/* ============================================================
+   Navigazione tab della console docente (AdminScreen).
+   Desktop: barra orizzontale di pulsanti.
+   Mobile (<= 760px): hamburger + tendina laterale (off-canvas).
+   ============================================================ */
+.admin-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+.admin-tabs-toggle { display: none; }
+.admin-tabs-close { display: none; }
+.admin-drawer-overlay { display: none; }
+
+@media (max-width: 760px) {
+  /* Pulsante hamburger che apre la tendina (mostra anche la sezione corrente). */
+  .admin-tabs-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    width: 100%;
+    margin-bottom: 1rem;
+    text-align: left;
+  }
+
+  /* Overlay scuro dietro la tendina. */
+  .admin-drawer-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 60;
+    animation: admin-overlay-in 0.2s ease;
+  }
+
+  /* La barra tab diventa una tendina laterale fuori schermo. */
+  .admin-tabs {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(82vw, 320px);
+    margin: 0;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 0.5rem;
+    padding: 1rem;
+    background: var(--card);
+    border-right: 1px solid var(--border);
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.4);
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    z-index: 61;
+    overflow-y: auto;
+  }
+  .admin-tabs.open { transform: translateX(0); }
+
+  .admin-tabs .btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.4rem;
+  }
+
+  .admin-tabs-close {
+    display: inline-flex;
+    align-self: flex-end;
+    background: none;
+    border: none;
+    color: var(--fg);
+    font-size: 1.4rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0.1rem 0.4rem;
+    margin-bottom: 0.25rem;
+  }
+}
+
+@keyframes admin-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
 

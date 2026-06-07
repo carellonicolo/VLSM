@@ -13,6 +13,7 @@ import { Header } from '../ui/Header';
 import { Footer } from '../ui/Footer';
 import { ThemeToggle } from '../ui/ThemeToggle';
 import { HomeLink } from '../ui/HomeLink';
+import { AccountMenu } from '../ui/AccountMenu';
 import { useTheme } from '../../hooks/useTheme';
 
 const GuideModal = lazy(() =>
@@ -47,6 +48,7 @@ export function CalcolatoriPage() {
       <Header
         actions={
           <>
+            <AccountMenu />
             <HomeLink />
             <ThemeToggle theme={theme} onToggle={toggle} />
           </>

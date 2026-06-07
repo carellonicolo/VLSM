@@ -11,6 +11,15 @@ import { ClassesTab } from './ClassesTab';
 
 type AdminTab = 'studenti' | 'classi' | 'live' | 'bulk' | 'verifiche' | 'settings';
 
+const ADMIN_TABS: { value: AdminTab; label: string }[] = [
+  { value: 'studenti', label: '👥 Studenti' },
+  { value: 'classi', label: '🎛 Classi & esame' },
+  { value: 'live', label: '🟢 Sessioni live (cloud)' },
+  { value: 'bulk', label: '📥 Correzione PDF (bulk)' },
+  { value: 'verifiche', label: '📄 Verifiche & Soluzioni' },
+  { value: 'settings', label: '⚙️ Impostazioni' },
+];
+
 interface Props {
   onExit: () => void;
 }
@@ -54,6 +63,7 @@ function badgeLabel(status: VerifyStatus | undefined): string {
 
 export function AdminScreen({ onExit }: Props) {
   const [tab, setTab] = useState<AdminTab>('studenti');
+  const [menuOpen, setMenuOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [parsing, setParsing] = useState(false);
 
@@ -152,51 +162,43 @@ export function AdminScreen({ onExit }: Props) {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-        <button
-          className={tab === 'studenti' ? 'btn' : 'btn btn-secondary'}
-          type="button"
-          onClick={() => setTab('studenti')}
-        >
-          👥 Studenti
-          {pendingCount > 0 && <span className="tab-badge" title={`${pendingCount} in attesa di convalida`}>{pendingCount}</span>}
-        </button>
-        <button
-          className={tab === 'classi' ? 'btn' : 'btn btn-secondary'}
-          type="button"
-          onClick={() => setTab('classi')}
-        >
-          🎛 Classi &amp; esame
-        </button>
-        <button
-          className={tab === 'live' ? 'btn' : 'btn btn-secondary'}
-          type="button"
-          onClick={() => setTab('live')}
-        >
-          🟢 Sessioni live (cloud)
-        </button>
-        <button
-          className={tab === 'bulk' ? 'btn' : 'btn btn-secondary'}
-          type="button"
-          onClick={() => setTab('bulk')}
-        >
-          📥 Correzione PDF (bulk)
-        </button>
-        <button
-          className={tab === 'verifiche' ? 'btn' : 'btn btn-secondary'}
-          type="button"
-          onClick={() => setTab('verifiche')}
-        >
-          📄 Verifiche &amp; Soluzioni
-        </button>
-        <button
-          className={tab === 'settings' ? 'btn' : 'btn btn-secondary'}
-          type="button"
-          onClick={() => setTab('settings')}
-        >
-          ⚙️ Impostazioni
-        </button>
-      </div>
+      {/* Hamburger: visibile solo su mobile, apre la tendina laterale. */}
+      <button
+        type="button"
+        className="admin-tabs-toggle btn btn-secondary"
+        aria-expanded={menuOpen}
+        aria-controls="admin-tabs-nav"
+        onClick={() => setMenuOpen(true)}
+      >
+        <span>☰ Sezione: {ADMIN_TABS.find((t) => t.value === tab)?.label}</span>
+        {pendingCount > 0 && <span className="tab-badge" title={`${pendingCount} in attesa di convalida`}>{pendingCount}</span>}
+      </button>
+
+      {menuOpen && <div className="admin-drawer-overlay" onClick={() => setMenuOpen(false)} aria-hidden="true" />}
+
+      <nav
+        id="admin-tabs-nav"
+        className={`admin-tabs${menuOpen ? ' open' : ''}`}
+        aria-label="Sezioni modalità docente"
+      >
+        <button type="button" className="admin-tabs-close" onClick={() => setMenuOpen(false)} aria-label="Chiudi menu">✕</button>
+        {ADMIN_TABS.map((t) => (
+          <button
+            key={t.value}
+            className={tab === t.value ? 'btn' : 'btn btn-secondary'}
+            type="button"
+            onClick={() => {
+              setTab(t.value);
+              setMenuOpen(false);
+            }}
+          >
+            {t.label}
+            {t.value === 'studenti' && pendingCount > 0 && (
+              <span className="tab-badge" title={`${pendingCount} in attesa di convalida`}>{pendingCount}</span>
+            )}
+          </button>
+        ))}
+      </nav>
 
       {tab === 'studenti' && <StudentsTab active={tab === 'studenti'} />}
       {tab === 'classi' && <ClassesTab active={tab === 'classi'} />}

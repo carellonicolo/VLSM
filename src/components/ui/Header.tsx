@@ -17,9 +17,6 @@ export function Header({ actions }: Props) {
             <span className="school-header-divider">—</span>
             <span className="school-header-prof">Prof. Carello Nicolò</span>
           </h1>
-          <div className="school-header-subtitle">
-            ITIS G. Marconi · Verona · Sistemi e Reti (SRI) · A.S. 2025/2026
-          </div>
         </div>
         {actions && <div className="school-header-actions">{actions}</div>}
       </div>
