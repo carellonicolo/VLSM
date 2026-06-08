@@ -1,9 +1,11 @@
 import { jsonError, jsonOk, requireSuperAdmin, type SharedEnv } from '../../../_lib/shared';
+import { fetchIdpRoster, primaryClassOf, studentStatusOf } from '../../../_lib/idp';
 
 /**
- * GET /api/admin/students/:id → profilo (proiezione SSO) + storico verifiche.
- * Solo docente (super-admin SSO). Roster in sola lettura: la gestione account
- * (creazione/sospensione/eliminazione) è sull'IdP auth.nicolocarello.it.
+ * GET /api/admin/students/:id → profilo + storico verifiche.
+ * Profilo dal roster IdP (così appare anche chi non ha mai aperto VLSM), con
+ * fallback alla proiezione locale. Lo storico è dato dalle sessioni VLSM.
+ * Solo docente (super-admin SSO). Gestione account: sull'IdP.
  */
 export const onRequestGet: PagesFunction<SharedEnv> = async ({ params, request, env }) => {
   const auth = await requireSuperAdmin(request);
@@ -13,11 +15,33 @@ export const onRequestGet: PagesFunction<SharedEnv> = async ({ params, request, 
   if (!id) return jsonError(400, 'id mancante.');
 
   try {
-    const student = await env.DB.prepare(
-      `SELECT id, email, full_name, declared_class, class, status, must_change_password,
-              created_at, validated_at, last_login_at, notes
-         FROM students WHERE id = ?`
-    ).bind(id).first();
+    let student: unknown = null;
+    const roster = await fetchIdpRoster(request);
+    if (roster) {
+      const u = roster.find((x) => x.id === id);
+      if (u) {
+        student = {
+          id: u.id,
+          email: u.email,
+          full_name: u.name,
+          declared_class: null,
+          class: primaryClassOf(u),
+          status: studentStatusOf(u),
+          must_change_password: 0,
+          created_at: u.createdAt,
+          validated_at: null,
+          last_login_at: u.lastLoginAt,
+          notes: null,
+        };
+      }
+    }
+    if (!student) {
+      student = await env.DB.prepare(
+        `SELECT id, email, full_name, declared_class, class, status, must_change_password,
+                created_at, validated_at, last_login_at, notes
+           FROM students WHERE id = ?`
+      ).bind(id).first();
+    }
     if (!student) return jsonError(404, 'Studente non trovato.');
 
     const { results } = await env.DB.prepare(
