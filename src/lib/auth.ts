@@ -100,7 +100,11 @@ export function redirectToLogin(): void {
   window.location.assign(`${AUTH_ORIGIN}/login?redirect=${encodeURIComponent(window.location.href)}`);
 }
 
-/** Logout globale (disconnette da tutte le app), poi torna alla home dell'app. */
+/**
+ * Logout globale: l'endpoint `/api/logout` dell'IdP cancella il cookie di sessione
+ * condiviso (`nc_session`, Domain .nicolocarello.it) — quindi disconnette in un colpo
+ * solo TUTTE le app che usano l'SSO — e poi fa un 302 di ritorno alla home di questa app.
+ */
 export function redirectToLogout(): void {
-  window.location.assign(`${AUTH_ORIGIN}/logout?redirect=${encodeURIComponent(window.location.origin)}`);
+  window.location.assign(`${AUTH_ORIGIN}/api/logout?redirect=${encodeURIComponent(window.location.origin)}`);
 }

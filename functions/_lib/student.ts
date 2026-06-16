@@ -5,8 +5,11 @@
  * `id = userId SSO (sub)`. Niente più password/registrazione locali (gestite
  * sull'IdP auth.nicolocarello.it). Qui:
  *
- *  - loadStudentFromSession → verifySession (economico) + upsert proiezione.
- *    NESSUN round-trip all'IdP: adatto ai salvataggi frequenti durante la verifica.
+ *  - loadStudentFromSession → verifySession + UPSERT proiezione. Usata SOLO da
+ *    /api/auth/me (una volta a load), per rinfrescare la proiezione.
+ *  - getStudentRow          → verifySession + SELECT (NESSUNA scrittura). Provisiona
+ *    solo se la riga manca. Per gli endpoint FREQUENTI (save/events/recover/history):
+ *    evita una scrittura su `students` a ogni salvataggio/polling.
  *  - fetchSsoInfo            → dato fresco IdP (stato + classi approvate + super-admin).
  *  - syncStudentFromInfo     → aggiorna class/status della proiezione dal dato fresco.
  *
@@ -66,17 +69,16 @@ export function mapStatus(ssoStatus: string, hasApprovedClass: boolean): string 
   return hasApprovedClass ? 'validated' : 'pending';
 }
 
-/**
- * verifySession + upsert della proiezione `students`. Economico (no IdP).
- * Ritorna lo StudentRow oppure una Response 401 da restituire al client.
- */
-export async function loadStudentFromSession(request: Request, env: SharedEnv): Promise<StudentRow | Response> {
-  const identity = await verifySession(request);
-  if (!identity) return jsonError(401, 'Sessione non valida o scaduta. Effettua di nuovo l’accesso.');
+interface Identity {
+  userId: string;
+  email: string;
+  name: string;
+  status: string;
+}
 
+/** Upsert della proiezione `students` dall'identità SSO (una SCRITTURA). */
+async function provisionStudent(env: SharedEnv, identity: Identity): Promise<void> {
   const now = new Date().toISOString();
-  // Crea la proiezione se manca; altrimenti aggiorna i campi che vengono dall'identità.
-  // class/status di dettaglio sono aggiornati da syncStudentFromInfo (dato fresco IdP).
   await env.DB.prepare(
     `INSERT INTO students (id, email, full_name, declared_class, class, status, password_hash, must_change_password, created_at, last_login_at)
      VALUES (?, ?, ?, NULL, NULL, ?, 'sso', 0, ?, ?)
@@ -96,8 +98,38 @@ export async function loadStudentFromSession(request: Request, env: SharedEnv): 
       identity.status
     )
     .run();
+}
 
-  const row = await env.DB.prepare(`SELECT ${STUDENT_COLS} FROM students WHERE id = ?`).bind(identity.userId).first<StudentRow>();
+function selectStudent(env: SharedEnv, id: string): Promise<StudentRow | null> {
+  return env.DB.prepare(`SELECT ${STUDENT_COLS} FROM students WHERE id = ?`).bind(id).first<StudentRow>();
+}
+
+/**
+ * verifySession + UPSERT della proiezione `students`. Usata SOLO da /api/auth/me
+ * (una volta a load). Ritorna lo StudentRow oppure una Response 401.
+ */
+export async function loadStudentFromSession(request: Request, env: SharedEnv): Promise<StudentRow | Response> {
+  const identity = await verifySession(request);
+  if (!identity) return jsonError(401, 'Sessione non valida o scaduta. Effettua di nuovo l’accesso.');
+  await provisionStudent(env, identity);
+  const row = await selectStudent(env, identity.userId);
+  if (!row) return jsonError(500, 'Errore di provisioning dello studente.');
+  return row;
+}
+
+/**
+ * verifySession + SELECT della proiezione, SENZA scrittura. Provisiona solo se la
+ * riga manca (primo accesso). Pensata per gli endpoint frequenti (save/events/
+ * recover/history): niente churn di scritture su `students`.
+ */
+export async function getStudentRow(request: Request, env: SharedEnv): Promise<StudentRow | Response> {
+  const identity = await verifySession(request);
+  if (!identity) return jsonError(401, 'Sessione non valida o scaduta. Effettua di nuovo l’accesso.');
+  let row = await selectStudent(env, identity.userId);
+  if (!row) {
+    await provisionStudent(env, identity);
+    row = await selectStudent(env, identity.userId);
+  }
   if (!row) return jsonError(500, 'Errore di provisioning dello studente.');
   return row;
 }
