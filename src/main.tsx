@@ -4,6 +4,7 @@ import App from './App';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { BackgroundDecor } from './components/ui/BackgroundDecor';
 import './index.css';
+import './styles/carello-theme.css'; // ← tema Carello (rimuovi questa riga per rollback)
 
 // Blocco globale del menù contestuale (tasto destro).
 // Deterrente leggero contro copia/ispezione casuale — gli utenti motivati

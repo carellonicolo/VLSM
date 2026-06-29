@@ -1,0 +1,168 @@
+/* ============================================================
+   CARELLO THEME — Direzione C (Material/Google-like, caldo)
+   ------------------------------------------------------------
+   Ri-tematizza un'app shadcn/ui SENZA toccarne i componenti.
+   Funziona perché CCNA1 (e le altre app) usano già le variabili
+   --sc-* definite in src/index.css. Qui le sovrascriviamo.
+
+   COME SI USA (vedi HANDOFF.md per i dettagli):
+     import './carello-theme.css'   // dopo l'import di index.css
+
+   Per tornare indietro: rimuovi quell'unico import. Nessun
+   componente viene modificato.
+   ============================================================ */
+
+/* --- Font del sistema unificato --- */
+@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+:root {
+  /* Palette Direzione C — valori HSL nel formato richiesto da shadcn */
+  --sc-background: 36 43% 97%;      /* crema caldo  #FBF7F2 */
+  --sc-foreground: 30 13% 12%;      /* inchiostro   #23201C */
+
+  --sc-card: 0 0% 100%;             /* #FFFFFF */
+  --sc-card-foreground: 30 13% 12%;
+  --sc-popover: 0 0% 100%;
+  --sc-popover-foreground: 30 13% 12%;
+
+  --sc-primary: 19 76% 53%;         /* arancione brand #E0662B */
+  --sc-primary-foreground: 0 0% 100%;
+
+  --sc-secondary: 35 38% 93%;       /* sabbia chiara #F4EEE6 */
+  --sc-secondary-foreground: 30 13% 22%;
+
+  --sc-muted: 35 38% 93%;
+  --sc-muted-foreground: 33 11% 47%;/* #857A6C */
+
+  --sc-accent: 19 84% 92%;          /* tinta arancio chiara #FCE6DA */
+  --sc-accent-foreground: 19 76% 40%;
+
+  --sc-destructive: 356 64% 56%;    /* rosso #D64550 */
+  --sc-destructive-foreground: 0 0% 100%;
+
+  --sc-border: 35 33% 91%;          /* #F0E9E0 */
+  --sc-input: 35 33% 88%;
+  --sc-ring: 19 76% 53%;
+
+  --sc-radius: 0.9rem;              /* angoli più morbidi (Material You) */
+
+  /* Colori grafici coerenti con le categorie del sistema */
+  --sc-chart-1: 19 76% 53%;   /* arancione */
+  --sc-chart-2: 211 82% 53%;  /* blu       */
+  --sc-chart-3: 192 86% 37%;  /* teal      */
+  --sc-chart-4: 145 75% 34%;  /* verde     */
+  --sc-chart-5: 267 65% 56%;  /* viola     */
+}
+
+.dark {
+  --sc-background: 30 12% 9%;        /* #1A1714 */
+  --sc-foreground: 36 30% 94%;
+
+  --sc-card: 30 10% 13%;            /* #221F1C */
+  --sc-card-foreground: 36 30% 94%;
+  --sc-popover: 30 10% 13%;
+  --sc-popover-foreground: 36 30% 94%;
+
+  --sc-primary: 19 84% 60%;         /* arancione più luminoso in dark */
+  --sc-primary-foreground: 30 13% 10%;
+
+  --sc-secondary: 28 8% 20%;
+  --sc-secondary-foreground: 36 30% 94%;
+
+  --sc-muted: 28 8% 20%;
+  --sc-muted-foreground: 33 12% 65%;
+
+  --sc-accent: 28 10% 24%;
+  --sc-accent-foreground: 19 84% 70%;
+
+  --sc-destructive: 356 55% 48%;
+  --sc-destructive-foreground: 0 0% 100%;
+
+  --sc-border: 28 8% 22%;
+  --sc-input: 28 8% 22%;
+  --sc-ring: 19 84% 60%;
+}
+
+/* --- Tipografia del sistema (non cambia struttura, solo i font) --- */
+:root {
+  --carello-font-sans: 'Lexend', system-ui, -apple-system, sans-serif;
+  --carello-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+body {
+  font-family: var(--carello-font-sans);
+}
+code, kbd, pre, samp, .font-mono, [class*="mono"] {
+  font-family: var(--carello-font-mono);
+}
+
+/* ============================================================
+   CARELLO THEME — Palette propria dell'app (--bg / --primary / ...)
+   ------------------------------------------------------------
+   L'UI principale di CCNA1 (tab docente, pulsanti .btn, card, quiz)
+   NON usa le variabili shadcn --sc-*: usa la palette storica
+   --bg/--fg/--primary/... definita in src/index.css. Per ri-tematizzare
+   davvero l'app servono questi override (oltre a quelli --sc-* qui sopra).
+
+   Dark mode dell'app = selettore [data-theme='dark'] (NON .dark).
+
+   Solo aspetto, nessun componente toccato. Rollback: rimuovi l'import
+   del tema. I colori semantici verde (successo) e giallo (avviso)
+   restano invariati per non cambiarne il significato.
+   ============================================================ */
+:root {
+  --bg: #fbf7f2;            /* crema caldo (era #f4f6fa) */
+  --fg: #23201c;            /* inchiostro caldo */
+  --primary: #e0662b;       /* arancione brand (era #0b3d91) */
+  --primary-hover: #c9551f; /* arancione scuro */
+  --border: #f0e9e0;        /* bordo caldo */
+  --error: #d64550;
+  --error-bg: #fbe7e4;
+  --error-text: #b5323c;
+  --muted: #857a6c;         /* grigio caldo */
+  --card: #ffffff;
+  --readonly-bg: #f4eee6;   /* sabbia chiara */
+  --table-head: #f4eee6;
+  --consegna-bg: #f8f4ee;
+  --input-bg: #ffffff;
+  --input-focus-bg: #fff7ef;/* focus caldo */
+  /* successo (verde) e avviso (giallo) lasciati invariati: semantici */
+}
+
+[data-theme='dark'] {
+  --bg: #1a1714;            /* fondo caldo scuro (era #0f172a) */
+  --fg: #f2eadf;
+  --primary: #ee7b43;       /* arancione luminoso in dark (era #3b82f6) */
+  --primary-hover: #e0662b;
+  --border: #3d3733;
+  --error: #e06a72;
+  --error-bg: #3a1e1b;
+  --error-text: #fca5a5;
+  --muted: #b8ac9c;
+  --card: #221f1c;
+  --readonly-bg: #161310;
+  --table-head: #221f1c;
+  --consegna-bg: #161310;
+  --input-bg: #1a1714;
+  --input-focus-bg: #3a2a1e;
+  /* successo (verde) e avviso (giallo) lasciati invariati: semantici */
+}
+
+/* --- Top bar .school-header: gradiente caldo Carello (era blu→viola) --- */
+.school-header {
+  background: linear-gradient(135deg, #c9551f 0%, #e0662b 45%, #ed8a3e 100%);
+  box-shadow: 0 6px 20px rgba(224, 102, 43, 0.25), 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+[data-theme='dark'] .school-header {
+  background: linear-gradient(135deg, #b5471a 0%, #e0662b 45%, #ee9a52 100%);
+  box-shadow: 0 6px 20px rgba(238, 123, 67, 0.22), 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+/* --- Riga azioni (account/home/tema) quando la carello-shell sostituisce
+       l'header originale: controlli funzionali allineati a destra. --- */
+.carello-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  margin: 0 0 1.25rem;
+}
