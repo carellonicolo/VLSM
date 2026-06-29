@@ -5,7 +5,9 @@ import type { ReactNode } from 'react';
 // import { ThemeToggle } from './ThemeToggle';
 // import { useTheme } from '../../hooks/useTheme';
 import { Footer } from './Footer';
-import { HomeLink } from './HomeLink';
+// HomeLink rimosso dall'header: la home è ora il nome dell'app cliccabile
+// nella <carello-shell> (breadcrumb → "/"). File mantenuto per riuso/rollback.
+// import { HomeLink } from './HomeLink';
 import { AccountMenu } from './AccountMenu';
 
 interface Props {
@@ -42,11 +44,10 @@ export function AppShell({ children, back, hideAccount }: Props) {
         }
       />
       */}
-      {/* Controlli funzionali specifici dell'app che la shell non copre:
-          logout SSO dell'app (AccountMenu) e ritorno alla home interna (HomeLink). */}
+      {/* Controllo funzionale specifico dell'app che la shell non copre:
+          logout SSO dell'app (AccountMenu). La home è il nome app nella shell. */}
       <div className="carello-actions-row">
         {!hideAccount && <AccountMenu />}
-        <HomeLink />
       </div>
       {back}
       {children}
