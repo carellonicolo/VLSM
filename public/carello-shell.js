@@ -205,10 +205,20 @@
         const base = authUrl.replace(/\/$/, '');
         const profileLink = this.shadowRoot.getElementById('profileLink');
         const logoutLink = this.shadowRoot.getElementById('logoutLink');
+        // Loggato? Lo deduciamo dalla presenza del cookie nc_profile (= profileName).
+        // Non loggato: la voce "Profilo" diventa "Login" (porta comunque all'IdP,
+        // che mostra il login) e nascondiamo "Logout" (e la Dashboard app), che
+        // non avrebbero senso senza sessione.
+        const loggedIn = !!profileName;
         if (profileLink) profileLink.href = base + '/';
-        if (logoutLink) logoutLink.href = base + '/api/logout?redirect=' + encodeURIComponent(window.location.origin);
+        const profileLabelEl = this.shadowRoot.getElementById('profileLabel');
+        if (profileLabelEl) profileLabelEl.textContent = loggedIn ? 'Profilo' : 'Login';
+        if (logoutLink) {
+          logoutLink.href = base + '/api/logout?redirect=' + encodeURIComponent(window.location.origin);
+          logoutLink.style.display = loggedIn ? '' : 'none';
+        }
         const dashLink = this.shadowRoot.getElementById('dashLink');
-        if (dashLink && dashUrl) {
+        if (dashLink && dashUrl && loggedIn) {
           dashLink.href = dashUrl;
           const dashLabelEl = this.shadowRoot.getElementById('dashLabel');
           if (dashLabelEl) dashLabelEl.textContent = dashLabel;
@@ -390,7 +400,7 @@
               </a>
               <a class="mitem" id="profileLink" href="#" target="_top">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                Profilo
+                <span id="profileLabel">Profilo</span>
               </a>
               <a class="mitem danger" id="logoutLink" href="#" target="_top">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
