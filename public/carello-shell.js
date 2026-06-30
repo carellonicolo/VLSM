@@ -206,11 +206,16 @@
         const profileLink = this.shadowRoot.getElementById('profileLink');
         const logoutLink = this.shadowRoot.getElementById('logoutLink');
         // Loggato? Lo deduciamo dalla presenza del cookie nc_profile (= profileName).
-        // Non loggato: la voce "Profilo" diventa "Login" (porta comunque all'IdP,
-        // che mostra il login) e nascondiamo "Logout" (e la Dashboard app), che
-        // non avrebbero senso senza sessione.
+        // Non loggato: la voce "Profilo" diventa "Login" e punta al login centrale
+        // con redirect alla pagina CORRENTE (così dopo l'auth si torna qui, non si
+        // resta sulla dashboard dell'IdP); inoltre nascondiamo "Logout" (e la
+        // Dashboard app), che non avrebbero senso senza sessione.
         const loggedIn = !!profileName;
-        if (profileLink) profileLink.href = base + '/';
+        if (profileLink) {
+          profileLink.href = loggedIn
+            ? base + '/'
+            : base + '/login?redirect=' + encodeURIComponent(window.location.href);
+        }
         const profileLabelEl = this.shadowRoot.getElementById('profileLabel');
         if (profileLabelEl) profileLabelEl.textContent = loggedIn ? 'Profilo' : 'Login';
         if (logoutLink) {
