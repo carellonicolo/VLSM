@@ -5,26 +5,27 @@ import type { ReactNode } from 'react';
 // import { ThemeToggle } from './ThemeToggle';
 // import { useTheme } from '../../hooks/useTheme';
 import { Footer } from './Footer';
-// HomeLink rimosso dall'header: la home è ora il nome dell'app cliccabile
-// nella <carello-shell> (breadcrumb → "/"). File mantenuto per riuso/rollback.
+// HomeLink e AccountMenu rimossi dalla riga azioni: ora nella <carello-shell>
+// l'header unificato espone home (nome app cliccabile), Profilo, Dashboard VLSM
+// e Logout. Componenti mantenuti nel repo per riuso/rollback.
 // import { HomeLink } from './HomeLink';
-import { AccountMenu } from './AccountMenu';
+// import { AccountMenu } from './AccountMenu';
 
 interface Props {
   children: ReactNode;
   /** Riga opzionale (es. link "torna indietro") subito sotto l'header. */
   back?: ReactNode;
-  /** Nasconde il menu account (es. nelle schermate di login). */
+  /** Nasconde il menu account (es. nelle schermate di login). Non più usato:
+   *  l'account è gestito dalla shell. Mantenuto per compatibilità dei chiamanti. */
   hideAccount?: boolean;
 }
 
-export function AppShell({ children, back, hideAccount }: Props) {
-  // const { theme, toggle } = useTheme(); // tema ora gestito dalla <carello-shell>
+export function AppShell({ children, back }: Props) {
   return (
     <div className="shell">
-      {/* Top bar unificata Carello: brand, breadcrumb, launcher, tema e avatar
-          (Profilo/Logout via auth.nicolocarello.it). Sostituisce il vecchio
-          <Header>. Il pulsante tema scrive su `vlsm_theme` (vedi carello-shell.js). */}
+      {/* Top bar unificata Carello: brand, breadcrumb (nome app → home),
+          launcher, tema e avatar con dropdown Profilo / Dashboard VLSM / Logout.
+          Sostituisce il vecchio <Header>. Il pulsante tema scrive su `vlsm_theme`. */}
       <carello-shell
         app-name="VLSM Test"
         app-icon="Network"
@@ -32,6 +33,8 @@ export function AppShell({ children, back, hideAccount }: Props) {
         user="NC"
         data-hub-url="https://nicolocarello.it"
         data-auth-url="https://auth.nicolocarello.it"
+        data-dash-url="/dashboard"
+        data-dash-label="Dashboard VLSM"
       />
       {/*
       <Header
@@ -44,11 +47,6 @@ export function AppShell({ children, back, hideAccount }: Props) {
         }
       />
       */}
-      {/* Controllo funzionale specifico dell'app che la shell non copre:
-          logout SSO dell'app (AccountMenu). La home è il nome app nella shell. */}
-      <div className="carello-actions-row">
-        {!hideAccount && <AccountMenu />}
-      </div>
       {back}
       {children}
       <Footer />

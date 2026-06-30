@@ -144,6 +144,11 @@
       const user    = (profileName ? (initials(profileName) || '').toUpperCase() : '') || this.getAttribute('user') || 'NC';
       const sbUrl   = this.getAttribute('data-hub-url') || '';
       const authUrl = this.getAttribute('data-auth-url') || '';
+      // Voce opzionale del dropdown account verso una pagina dell'app (es. la
+      // dashboard personale). Compare solo se l'app la fornisce: le altre app
+      // del Hub restano invariate.
+      const dashUrl   = this.getAttribute('data-dash-url') || '';
+      const dashLabel = this.getAttribute('data-dash-label') || 'Dashboard';
       // Alcune app (es. l'IdP AUTH) non hanno tema chiaro/scuro: nascondi il pulsante.
       const hideTheme = this.hasAttribute('data-hide-theme');
 
@@ -202,6 +207,13 @@
         const logoutLink = this.shadowRoot.getElementById('logoutLink');
         if (profileLink) profileLink.href = base + '/';
         if (logoutLink) logoutLink.href = base + '/api/logout?redirect=' + encodeURIComponent(window.location.origin);
+        const dashLink = this.shadowRoot.getElementById('dashLink');
+        if (dashLink && dashUrl) {
+          dashLink.href = dashUrl;
+          const dashLabelEl = this.shadowRoot.getElementById('dashLabel');
+          if (dashLabelEl) dashLabelEl.textContent = dashLabel;
+          dashLink.style.display = '';
+        }
         avatarBtn.addEventListener('click', (e) => { e.stopPropagation(); accMenu.classList.toggle('open'); });
         document.addEventListener('click', () => accMenu.classList.remove('open'));
       } else if (avatarBtn) {
@@ -372,6 +384,10 @@
           <div class="wrap">
             <button class="avatar" id="avatarBtn" title="Account">${user}</button>
             <div class="menu" id="accMenu">
+              <a class="mitem" id="dashLink" href="#" target="_top" style="display:none">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+                <span id="dashLabel">Dashboard</span>
+              </a>
               <a class="mitem" id="profileLink" href="#" target="_top">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                 Profilo

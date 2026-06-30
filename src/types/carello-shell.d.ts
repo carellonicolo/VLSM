@@ -13,6 +13,8 @@ declare namespace JSX {
       'data-hub-url'?: string;
       'data-auth-url'?: string;
       'data-hide-theme'?: boolean | string;
+      'data-dash-url'?: string;
+      'data-dash-label'?: string;
     };
   }
 }
