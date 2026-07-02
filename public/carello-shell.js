@@ -40,7 +40,7 @@
     { name: 'Verifica VLSM',   icon_name: 'Network',         color: '#0E8FB0', href: 'https://vlsm.nicolocarello.it' },
   ];
 
-  const LS_KEY = 'carello-apps-cache-v1';
+  const LS_KEY = 'carello-launcher-cache-v2';
   const ICON_BASE = 'https://unpkg.com/lucide-static@latest/icons/';
 
   // PascalCase Lucide (es. "FileText") -> kebab per i file SVG ("file-text")
@@ -113,25 +113,40 @@
     return obj && typeof obj.a === 'string' && obj.a.trim() ? obj.a.trim() : null;
   }
 
-  async function fetchApps(hubUrl) {
+  async function fetchHub(hubUrl) {
     const endpoint = hubUrl.replace(/\/$/, '') + '/api/db';
-    const spec = {
-      table: 'apps',
-      action: 'select',
-      columns: 'name,icon_name,href,color,position',
-      filters: [],
-      order: [{ column: 'position', ascending: true }],
-    };
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(spec),
-      // niente credentials: la lettura è pubblica, evita complicazioni CORS
-    });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const body = await res.json();
-    if (body.error) throw new Error(body.error.message || 'errore api');
-    return Array.isArray(body.data) ? body.data : [];
+    // niente credentials: la lettura è pubblica, evita complicazioni CORS
+    async function q(spec) {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(spec),
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const body = await res.json();
+      if (body.error) throw new Error(body.error.message || 'errore api');
+      return Array.isArray(body.data) ? body.data : [];
+    }
+    // Due letture pubbliche: le app (con appartenenza alle cartelle) e le
+    // cartelle. Entrambe ordinate per `position`, come nell'Hub, così l'ordine
+    // e l'interlacciamento cartelle/app coincidono con la dashboard.
+    const [apps, folders] = await Promise.all([
+      q({
+        table: 'apps',
+        action: 'select',
+        columns: 'name,icon_name,href,color,position,folder_id,position_in_folder',
+        filters: [],
+        order: [{ column: 'position', ascending: true }],
+      }),
+      q({
+        table: 'folders',
+        action: 'select',
+        columns: 'id,name,color,position',
+        filters: [],
+        order: [{ column: 'position', ascending: true }],
+      }),
+    ]);
+    return { apps, folders };
   }
 
   class CarelloShell extends HTMLElement {
@@ -173,8 +188,29 @@
 
       const btn = this.shadowRoot.getElementById('waffle');
       const pop = this.shadowRoot.getElementById('pop');
-      btn.addEventListener('click', (e) => { e.stopPropagation(); pop.classList.toggle('open'); });
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const willOpen = !pop.classList.contains('open');
+        pop.classList.toggle('open');
+        // Riapre sempre dal livello principale (cartelle + app top-level).
+        if (willOpen) this.renderTop();
+      });
+      // I click DENTRO il popup non lo devono chiudere (serve per aprire una
+      // cartella e usare "indietro"); i link-app navigano comunque via.
+      pop.addEventListener('click', (e) => e.stopPropagation());
       document.addEventListener('click', () => pop.classList.remove('open'));
+      // Click su una tessera-cartella: entra e mostra le app contenute.
+      const gridEl = this.shadowRoot.getElementById('grid');
+      gridEl.addEventListener('click', (e) => {
+        const folderBtn = e.target.closest('.tile.folder');
+        if (folderBtn) {
+          e.preventDefault();
+          this.renderFolder(folderBtn.getAttribute('data-folder'));
+        }
+      });
+      // Pulsante "indietro": torna al livello principale.
+      const backBtn = this.shadowRoot.getElementById('popback');
+      if (backBtn) backBtn.addEventListener('click', (e) => { e.stopPropagation(); this.renderTop(); });
 
       // Avatar: dropdown con Profilo (app AUTH) e Logout (SSO globale).
       // Logout replica esattamente redirectToLogout() dell'app: naviga
@@ -263,18 +299,22 @@
         this._themeBtnObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
       }
 
-      // 1) mostra subito la cache (o il fallback)
+      // 1) mostra subito la cache (o il fallback statico)
       let cached = null;
       try { cached = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch (e) {}
-      this.renderApps(cached && cached.length ? cached : FALLBACK);
+      if (cached && Array.isArray(cached.apps) && cached.apps.length) {
+        this.setData(cached.apps, cached.folders || []);
+      } else {
+        this.setData(FALLBACK, []);
+      }
 
-      // 2) aggiorna dal Hub (D1) in background
+      // 2) aggiorna dal Hub (D1) in background: app + cartelle
       if (sbUrl) {
         try {
-          const apps = await fetchApps(sbUrl);
+          const { apps, folders } = await fetchHub(sbUrl);
           if (Array.isArray(apps) && apps.length) {
-            localStorage.setItem(LS_KEY, JSON.stringify(apps));
-            this.renderApps(apps);
+            localStorage.setItem(LS_KEY, JSON.stringify({ apps, folders: folders || [] }));
+            this.setData(apps, folders || []);
           }
         } catch (e) {
           console.warn('[carello-shell] uso cache/fallback:', e.message);
@@ -286,25 +326,99 @@
       if (this._themeObserver) this._themeObserver.disconnect();
     }
 
-    renderApps(list) {
-      const grid = this.shadowRoot.getElementById('grid');
-      const badge = this.shadowRoot.getElementById('count');
-      if (badge) badge.textContent = list.length;
-      grid.innerHTML = list.map((a, idx) => `
+    // Salva i dati (app + cartelle) e mostra il livello principale.
+    setData(apps, folders) {
+      this._apps = Array.isArray(apps) ? apps : [];
+      this._folders = Array.isArray(folders) ? folders : [];
+      this.renderTop();
+    }
+
+    // Livello principale: cartelle + app SENZA cartella, interlacciate per la
+    // `position` condivisa. È la STESSA logica dell'Hub (serverGridItems in
+    // Index.tsx), così l'ordine e la posizione delle cartelle coincidono.
+    topLevelItems() {
+      const folders = (this._folders || []).map((f) => ({ type: 'folder', data: f, pos: Number(f.position) || 0 }));
+      const looseApps = (this._apps || [])
+        .filter((a) => !a.folder_id)
+        .map((a) => ({ type: 'app', data: a, pos: Number(a.position) || 0 }));
+      return [...folders, ...looseApps].sort((a, b) => a.pos - b.pos);
+    }
+
+    // App contenute in una cartella, ordinate per `position_in_folder` (come l'Hub).
+    appsInFolder(folderId) {
+      return (this._apps || [])
+        .filter((a) => a.folder_id === folderId)
+        .sort((a, b) => (Number(a.position_in_folder) || 0) - (Number(b.position_in_folder) || 0));
+    }
+
+    // HTML di una tessera-app (link che naviga all'app).
+    appTileHTML(a, idx) {
+      return `
         <a class="tile" href="${a.href}" data-i="${idx}">
           <span class="ico" style="background:${a.color || '#E0662B'}">
-            <span class="iconslot" data-icon="${a.icon_name || ''}">${initials(a.name)}</span>
+            <span class="iconslot">${initials(a.name)}</span>
           </span>
           <span class="lbl">${a.name}</span>
-        </a>`).join('');
-      // carica le icone Lucide async, sostituendo le iniziali quando disponibili
-      list.forEach((a, idx) => {
+        </a>`;
+    }
+
+    // Carica in async le icone Lucide delle app renderizzate, sostituendo le iniziali.
+    loadTileIcons(grid, apps) {
+      apps.forEach((a, idx) => {
         loadIcon(a.icon_name).then((svg) => {
           if (!svg) return;
           const slot = grid.querySelector('.tile[data-i="' + idx + '"] .iconslot');
           if (slot) slot.innerHTML = svg;
         });
       });
+    }
+
+    renderTop() {
+      const grid = this.shadowRoot.getElementById('grid');
+      const badge = this.shadowRoot.getElementById('count');
+      const title = this.shadowRoot.getElementById('poptitle');
+      const back = this.shadowRoot.getElementById('popback');
+      if (!grid) return;
+      const items = this.topLevelItems();
+      if (title) title.textContent = 'Le mie app';
+      if (back) back.style.display = 'none';
+      if (badge) badge.textContent = items.length;
+      // Le tessere-app hanno bisogno di un indice progressivo (data-i) per il
+      // caricamento async delle icone; le cartelle no.
+      const apps = [];
+      grid.innerHTML = items.map((it) => {
+        if (it.type === 'folder') {
+          const f = it.data;
+          const inner = this.appsInFolder(f.id).slice(0, 4)
+            .map((a) => `<i style="background:${a.color || '#E0662B'}"></i>`).join('');
+          return `
+            <button class="tile folder" data-folder="${f.id}" title="${f.name}">
+              <span class="ico folderico" style="background:${f.color || '#1E73E8'}">
+                <span class="mini">${inner}</span>
+              </span>
+              <span class="lbl">${f.name}</span>
+            </button>`;
+        }
+        const idx = apps.length;
+        apps.push(it.data);
+        return this.appTileHTML(it.data, idx);
+      }).join('');
+      this.loadTileIcons(grid, apps);
+    }
+
+    renderFolder(folderId) {
+      const grid = this.shadowRoot.getElementById('grid');
+      const badge = this.shadowRoot.getElementById('count');
+      const title = this.shadowRoot.getElementById('poptitle');
+      const back = this.shadowRoot.getElementById('popback');
+      const folder = (this._folders || []).find((f) => f.id === folderId);
+      if (!grid || !folder) return;
+      const apps = this.appsInFolder(folderId);
+      if (title) title.textContent = folder.name;
+      if (back) back.style.display = '';
+      if (badge) badge.textContent = apps.length;
+      grid.innerHTML = apps.map((a, idx) => this.appTileHTML(a, idx)).join('');
+      this.loadTileIcons(grid, apps);
     }
 
     template(appName, appIcon, accent, user) {
@@ -372,9 +486,13 @@
               border-radius:20px; box-shadow:var(--c-pop-shadow); padding:16px 14px 10px; z-index:1000;
               opacity:0; transform:translateY(-6px) scale(.98); pointer-events:none; transition:.16s ease; max-height:70vh; overflow:auto; }
         .pop.open{ opacity:1; transform:none; pointer-events:auto; }
-        .pophead{ display:flex; align-items:center; justify-content:space-between; padding:0 6px 12px; }
+        .pophead{ display:flex; align-items:center; justify-content:flex-start; gap:8px; padding:0 6px 12px; }
         .pophead b{ font-size:14px; color:var(--c-ink); }
-        .badge{ font-size:11px; color:var(--c-badge-fg); background:var(--c-badge-bg); padding:4px 10px; border-radius:999px; font-weight:600; }
+        .popback{ display:flex; align-items:center; justify-content:center; width:26px; height:26px; flex-shrink:0;
+                  border:none; background:transparent; color:var(--c-icon); cursor:pointer; border-radius:8px; }
+        .popback:hover{ background:var(--c-hover); }
+        .popback svg{ width:18px; height:18px; }
+        .badge{ margin-left:auto; font-size:11px; color:var(--c-badge-fg); background:var(--c-badge-bg); padding:4px 10px; border-radius:999px; font-weight:600; }
         #grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:4px; }
         .tile{ display:flex; flex-direction:column; align-items:center; gap:7px; padding:9px 3px; border-radius:14px; text-decoration:none; }
         .tile:hover{ background:var(--c-tile-hover); }
@@ -382,6 +500,12 @@
         .iconslot{ display:flex; align-items:center; justify-content:center; color:#fff; font-size:14px; font-weight:700; }
         .iconslot svg{ width:22px; height:22px; stroke:#fff; }
         .lbl{ font-size:10px; font-weight:600; color:var(--c-lbl); text-align:center; line-height:1.15; }
+        /* Tessera-cartella: <button> con lo stesso look delle app; l'icona è
+           un mini-mosaico (fino a 4) dei colori delle app contenute. */
+        .tile.folder{ background:none; border:none; cursor:pointer; font-family:inherit; padding:9px 3px; }
+        .folderico{ padding:8px; box-sizing:border-box; }
+        .mini{ display:grid; grid-template-columns:1fr 1fr; grid-auto-rows:1fr; gap:3px; width:100%; height:100%; }
+        .mini i{ display:block; border-radius:4px; min-height:0; }
       </style>
       <div class="bar">
         <div class="brand">
@@ -402,7 +526,13 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
             </button>
             <div class="pop" id="pop">
-              <div class="pophead"><b>Le mie app</b><span class="badge" id="count">—</span></div>
+              <div class="pophead">
+                <button class="popback" id="popback" title="Indietro" aria-label="Indietro" style="display:none">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+                </button>
+                <b id="poptitle">Le mie app</b>
+                <span class="badge" id="count">—</span>
+              </div>
               <div id="grid"></div>
             </div>
           </div>
