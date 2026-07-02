@@ -1,3 +1,4 @@
+import { AlertTriangle } from 'lucide-react';
 import type { RispostaStudente, Verifica } from '../../types/domain';
 
 interface Props {
@@ -78,7 +79,7 @@ export function ReviewScreen({ verifica, answers, onConferma, onIndietro, signin
             fontSize: '0.9rem',
           }}
         >
-          <strong>⚠ {errore}</strong>
+          <strong style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><AlertTriangle size={16} /> {errore}</strong>
         </div>
       )}
       <div className="actions">

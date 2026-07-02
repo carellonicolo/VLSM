@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { Calculator, LayoutDashboard, Target, ClipboardCheck, Users, LogIn, Network } from 'lucide-react';
 import { AppShell } from '../ui/AppShell';
 import { useAuth } from '../../hooks/useAuth';
 import { redirectToLogin } from '../../lib/auth';
@@ -10,6 +11,9 @@ export function HomePage() {
     <AppShell>
       <main className="landing">
         <div className="landing-intro">
+          <div className="landing-hero-icon" aria-hidden>
+            <Network size={32} color="#fff" />
+          </div>
           <h2 className="landing-title">VLSM &amp; Subnet — Toolkit didattico</h2>
           <p className="landing-subtitle">
             Calcolatori IPv4/IPv6, esercitazioni e verifiche ufficiali con il tuo account.
@@ -19,7 +23,7 @@ export function HomePage() {
 
         <div className="landing-grid">
           <Link to="/calcolatori" className="card landing-card">
-            <div className="landing-card-icon" aria-hidden>🧮</div>
+            <div className="landing-card-icon" aria-hidden><Calculator size={30} /></div>
             <h3 className="landing-card-title">Calcolatori</h3>
             <p className="landing-card-text">
               Subnet IPv4, IPv6, VLSM, FLSM, visualizzatori e guida didattica.
@@ -31,7 +35,7 @@ export function HomePage() {
           {student ? (
             <>
               <Link to="/dashboard" className="card landing-card">
-                <div className="landing-card-icon" aria-hidden>📊</div>
+                <div className="landing-card-icon" aria-hidden><LayoutDashboard size={30} /></div>
                 <h3 className="landing-card-title">La mia dashboard</h3>
                 <p className="landing-card-text">
                   Il tuo andamento, le verifiche e le esercitazioni svolte, lo stato del tuo account.
@@ -39,7 +43,7 @@ export function HomePage() {
                 <span className="landing-card-cta">Vai alla dashboard →</span>
               </Link>
               <Link to="/esercitazione" className="card landing-card">
-                <div className="landing-card-icon" aria-hidden>🎯</div>
+                <div className="landing-card-icon" aria-hidden><Target size={30} /></div>
                 <h3 className="landing-card-title">Esercitazione</h3>
                 <p className="landing-card-text">
                   Simulazioni libere per allenarti. Vengono salvate nel tuo storico personale.
@@ -47,7 +51,7 @@ export function HomePage() {
                 <span className="landing-card-cta">Inizia l'esercitazione →</span>
               </Link>
               <Link to="/verifica" className="card landing-card">
-                <div className="landing-card-icon" aria-hidden>📝</div>
+                <div className="landing-card-icon" aria-hidden><ClipboardCheck size={30} /></div>
                 <h3 className="landing-card-title">Verifica</h3>
                 <p className="landing-card-text">
                   Modalità ufficiale con timer e correzione automatica. Richiede account convalidato.
@@ -62,7 +66,7 @@ export function HomePage() {
               onClick={redirectToLogin}
               style={{ textAlign: 'left', cursor: 'pointer', font: 'inherit' }}
             >
-              <div className="landing-card-icon" aria-hidden>🔐</div>
+              <div className="landing-card-icon" aria-hidden><LogIn size={30} /></div>
               <h3 className="landing-card-title">Accedi</h3>
               <p className="landing-card-text">
                 Entra con il tuo account scolastico (accesso unico). Registrazione, recupero
@@ -72,8 +76,8 @@ export function HomePage() {
             </button>
           )}
 
-          <Link to="/admin" className="card landing-card">
-            <div className="landing-card-icon" aria-hidden>👨‍🏫</div>
+          <Link to="/admin" className="card landing-card landing-card-dark">
+            <div className="landing-card-icon" aria-hidden><Users size={30} /></div>
             <h3 className="landing-card-title">Modalità docente</h3>
             <p className="landing-card-text">
               Gestione studenti e classi, sessioni live, correzione e impostazioni.
