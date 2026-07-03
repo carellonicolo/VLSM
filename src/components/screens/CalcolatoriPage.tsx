@@ -9,12 +9,7 @@ import { SubnetVisualizer } from '@/components/calcolatori/SubnetVisualizer';
 import { IPv6SubnetCalculator } from '@/components/calcolatori/IPv6SubnetCalculator';
 import { IPv6VLSMCalculator } from '@/components/calcolatori/IPv6VLSMCalculator';
 import { IPv6SubnetVisualizer } from '@/components/calcolatori/IPv6SubnetVisualizer';
-import { Header } from '../ui/Header';
-import { Footer } from '../ui/Footer';
-import { ThemeToggle } from '../ui/ThemeToggle';
-import { HomeLink } from '../ui/HomeLink';
-import { AccountMenu } from '../ui/AccountMenu';
-import { useTheme } from '../../hooks/useTheme';
+import { AppShell } from '../ui/AppShell';
 
 const GuideModal = lazy(() =>
   import('@/components/calcolatori/modals/GuideModal').then((m) => ({ default: m.GuideModal }))
@@ -30,7 +25,6 @@ type Protocol = 'ipv4' | 'ipv6';
 type Tool = 'calculator' | 'flsm' | 'vlsm' | 'visualizer';
 
 export function CalcolatoriPage() {
-  const { theme, toggle } = useTheme();
   const [protocol, setProtocol] = useState<Protocol>('ipv4');
   const [tool, setTool] = useState<Tool>('calculator');
 
@@ -44,17 +38,7 @@ export function CalcolatoriPage() {
   };
 
   return (
-    <div className="shell">
-      <Header
-        actions={
-          <>
-            <AccountMenu />
-            <HomeLink />
-            <ThemeToggle theme={theme} onToggle={toggle} />
-          </>
-        }
-      />
-
+    <AppShell>
       <main className="calcolatori-page">
         <div className="calcolatori-breadcrumb">
           <Link to="/" className="back-link">← Torna alla home</Link>
@@ -114,8 +98,6 @@ export function CalcolatoriPage() {
           {protocol === 'ipv6' && tool === 'visualizer' && <IPv6SubnetVisualizer />}
         </div>
       </main>
-
-      <Footer />
-    </div>
+    </AppShell>
   );
 }
