@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Target,
@@ -18,7 +18,7 @@ import { ProgressView } from '../dashboard/ProgressView';
 import { useAuth } from '../../hooks/useAuth';
 import { studentGetSession, studentHistory, type HistorySession } from '../../lib/studentApi';
 
-type Section = 'overview' | 'esercitazione' | 'verifica' | 'andamento' | 'storico';
+type Section = 'overview' | 'verifica' | 'andamento' | 'storico';
 
 function StatusBanner() {
   const { student, exam, refresh } = useAuth();
@@ -75,6 +75,7 @@ function StatusBanner() {
 
 export function StudentDashboard() {
   const { student, exam, loading, refresh } = useAuth();
+  const navigate = useNavigate();
   const [section, setSection] = useState<Section>('overview');
   const [sessions, setSessions] = useState<HistorySession[]>([]);
   const [histLoading, setHistLoading] = useState(true);
@@ -120,8 +121,10 @@ export function StudentDashboard() {
 
   const items: SidebarItem[] = [
     { id: 'overview', label: 'Panoramica', icon: <LayoutDashboard size={18} />, active: section === 'overview', onClick: () => setSection('overview') },
-    { id: 'esercitazione', label: 'Esercitazione', icon: <Target size={18} />, active: section === 'esercitazione', onClick: () => setSection('esercitazione') },
-    { id: 'verifica', label: 'Verifica', icon: <ClipboardCheck size={18} />, dot: verificaAvailable, active: section === 'verifica', onClick: () => setSection('verifica') },
+    // Scorciatoie dirette: portano subito alla prova/strumento senza passaggi intermedi.
+    { id: 'esercitazione', label: 'Esercitazione', icon: <Target size={18} />, active: false, onClick: () => navigate('/esercitazione') },
+    { id: 'verifica', label: 'Verifica', icon: <ClipboardCheck size={18} />, dot: verificaAvailable, active: section === 'verifica', onClick: () => (verificaAvailable ? navigate('/verifica') : setSection('verifica')) },
+    { id: 'calcolatori', label: 'Calcolatori', icon: <Calculator size={18} />, active: false, onClick: () => navigate('/calcolatori') },
     { id: 'andamento', label: 'Andamento', icon: <TrendingUp size={18} />, active: section === 'andamento', onClick: () => setSection('andamento') },
     { id: 'storico', label: 'Storico', icon: <History size={18} />, active: section === 'storico', onClick: () => setSection('storico') },
   ];
@@ -200,10 +203,6 @@ export function StudentDashboard() {
             <h2 style={{ marginBottom: '0.5rem' }}>Il tuo andamento</h2>
             {progress}
           </>
-        )}
-
-        {section === 'esercitazione' && (
-          <div className="dash-actions">{esercitazioneCard}{calcolatoriCard}</div>
         )}
 
         {section === 'verifica' && (

@@ -76,7 +76,7 @@ export function HomePage() {
             </button>
           )}
 
-          <Link to="/admin" className="card landing-card landing-card-dark">
+          <Link to="/admin" className="card landing-card">
             <div className="landing-card-icon" aria-hidden><Users size={30} /></div>
             <h3 className="landing-card-title">Modalità docente</h3>
             <p className="landing-card-text">
