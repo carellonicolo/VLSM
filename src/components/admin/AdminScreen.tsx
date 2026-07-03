@@ -1,8 +1,25 @@
 import { useEffect, useMemo, useState } from 'react';
+import {
+  Users,
+  SlidersHorizontal,
+  Activity,
+  Inbox,
+  FileText,
+  Settings,
+  Home,
+  LogOut,
+  Download,
+  Check,
+  X,
+  AlertTriangle,
+  Clock,
+  FolderOpen,
+} from 'lucide-react';
 import { parseMultiple, toCsv, downloadCsv, type ParsedFile } from '../../lib/pdfBulk';
 import { cloudListStudents } from '../../lib/cloudSync';
 import { redirectToLogout } from '../../lib/auth';
 import type { VerifyStatus } from '../../lib/pdfSign';
+import { SidebarShell, type SidebarItem } from '../ui/SidebarShell';
 import { SessionsLive } from './SessionsLive';
 import { SettingsTab } from './SettingsTab';
 import { VerificheTab } from './VerificheTab';
@@ -10,15 +27,6 @@ import { StudentsTab } from './StudentsTab';
 import { ClassesTab } from './ClassesTab';
 
 type AdminTab = 'studenti' | 'classi' | 'live' | 'bulk' | 'verifiche' | 'settings';
-
-const ADMIN_TABS: { value: AdminTab; label: string }[] = [
-  { value: 'studenti', label: '👥 Studenti' },
-  { value: 'classi', label: '🎛 Classi & esame' },
-  { value: 'live', label: '🟢 Sessioni live (cloud)' },
-  { value: 'bulk', label: '📥 Correzione PDF (bulk)' },
-  { value: 'verifiche', label: '📄 Verifiche & Soluzioni' },
-  { value: 'settings', label: '⚙️ Impostazioni' },
-];
 
 interface Props {
   onExit: () => void;
@@ -46,16 +54,19 @@ function badgeStyle(status: VerifyStatus | undefined): React.CSSProperties {
   }
 }
 
-function badgeLabel(status: VerifyStatus | undefined): string {
+function badgeContent(status: VerifyStatus | undefined): React.ReactNode {
+  const wrap = (icon: React.ReactNode, text: string) => (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>{icon}{text}</span>
+  );
   switch (status) {
     case 'valid':
-      return '✅ Firma valida';
+      return wrap(<Check size={13} />, 'Firma valida');
     case 'invalid':
-      return '❌ Manomesso';
+      return wrap(<X size={13} />, 'Manomesso');
     case 'unsigned':
-      return '⚠️ Non firmato';
+      return wrap(<AlertTriangle size={13} />, 'Non firmato');
     case 'unavailable':
-      return '⏳ API non disponibile';
+      return wrap(<Clock size={13} />, 'API non disponibile');
     default:
       return '—';
   }
@@ -63,7 +74,6 @@ function badgeLabel(status: VerifyStatus | undefined): string {
 
 export function AdminScreen({ onExit }: Props) {
   const [tab, setTab] = useState<AdminTab>('studenti');
-  const [menuOpen, setMenuOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [parsing, setParsing] = useState(false);
 
@@ -152,54 +162,28 @@ export function AdminScreen({ onExit }: Props) {
     }
   };
 
-  return (
-    <>
-      <div className="test-header-bar">
-        <h2 style={{ margin: 0 }}>📊 Modalità docente</h2>
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <button className="btn btn-secondary" type="button" onClick={onExit}>← Home</button>
-          <button className="btn btn-secondary" type="button" onClick={redirectToLogout}>🚪 Esci dall'account</button>
-        </div>
-      </div>
+  const items: SidebarItem[] = [
+    { id: 'studenti', label: 'Studenti', icon: <Users size={18} />, badge: pendingCount || undefined, active: tab === 'studenti', onClick: () => setTab('studenti') },
+    { id: 'classi', label: 'Classi & esame', icon: <SlidersHorizontal size={18} />, active: tab === 'classi', onClick: () => setTab('classi') },
+    { id: 'live', label: 'Sessioni live', icon: <Activity size={18} />, active: tab === 'live', onClick: () => setTab('live') },
+    { id: 'bulk', label: 'Correzione PDF', icon: <Inbox size={18} />, active: tab === 'bulk', onClick: () => setTab('bulk') },
+    { id: 'verifiche', label: 'Verifiche & Soluzioni', icon: <FileText size={18} />, active: tab === 'verifiche', onClick: () => setTab('verifiche') },
+    { id: 'settings', label: 'Impostazioni', icon: <Settings size={18} />, active: tab === 'settings', onClick: () => setTab('settings') },
+  ];
 
-      {/* Hamburger: visibile solo su mobile, apre la tendina laterale. */}
-      <button
-        type="button"
-        className="admin-tabs-toggle btn btn-secondary"
-        aria-expanded={menuOpen}
-        aria-controls="admin-tabs-nav"
-        onClick={() => setMenuOpen(true)}
-      >
-        <span>☰ Sezione: {ADMIN_TABS.find((t) => t.value === tab)?.label}</span>
-        {pendingCount > 0 && <span className="tab-badge" title={`${pendingCount} in attesa di convalida`}>{pendingCount}</span>}
+  const footer = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <button className="sidebar-item" type="button" onClick={onExit}>
+        <Home size={18} /><span>Home</span>
       </button>
+      <button className="sidebar-item" type="button" onClick={redirectToLogout}>
+        <LogOut size={18} /><span>Esci dall'account</span>
+      </button>
+    </div>
+  );
 
-      {menuOpen && <div className="admin-drawer-overlay" onClick={() => setMenuOpen(false)} aria-hidden="true" />}
-
-      <nav
-        id="admin-tabs-nav"
-        className={`admin-tabs${menuOpen ? ' open' : ''}`}
-        aria-label="Sezioni modalità docente"
-      >
-        <button type="button" className="admin-tabs-close" onClick={() => setMenuOpen(false)} aria-label="Chiudi menu">✕</button>
-        {ADMIN_TABS.map((t) => (
-          <button
-            key={t.value}
-            className={tab === t.value ? 'btn' : 'btn btn-secondary'}
-            type="button"
-            onClick={() => {
-              setTab(t.value);
-              setMenuOpen(false);
-            }}
-          >
-            {t.label}
-            {t.value === 'studenti' && pendingCount > 0 && (
-              <span className="tab-badge" title={`${pendingCount} in attesa di convalida`}>{pendingCount}</span>
-            )}
-          </button>
-        ))}
-      </nav>
-
+  return (
+    <SidebarShell groupLabel="Console docente" items={items} footer={footer}>
       {tab === 'studenti' && <StudentsTab active={tab === 'studenti'} />}
       {tab === 'classi' && <ClassesTab active={tab === 'classi'} />}
       {tab === 'live' && <SessionsLive active={tab === 'live'} />}
@@ -233,10 +217,10 @@ export function AdminScreen({ onExit }: Props) {
             onChange={(e) => onFiles(e.target.files)}
             style={{ display: 'none' }}
           />
-          <strong>📂 Trascina i PDF qui</strong>
+          <strong style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><FolderOpen size={18} /> Trascina i PDF qui</strong>
           <div className="muted" style={{ marginTop: '0.5rem' }}>oppure clicca per scegliere uno o più file</div>
         </label>
-        {parsing && <p className="muted" style={{ marginTop: '0.5rem' }}>⏳ Parsing e verifica firme in corso…</p>}
+        {parsing && <p className="muted" style={{ marginTop: '0.5rem', display: 'inline-flex', alignItems: 'center', gap: 6 }}><Clock size={15} /> Parsing e verifica firme in corso…</p>}
         {parsed.length > 0 && (
           <>
             <div className="actions" style={{ marginTop: '1rem', flexWrap: 'wrap' }}>
@@ -246,24 +230,26 @@ export function AdminScreen({ onExit }: Props) {
                 type="button"
                 onClick={() => downloadCsv(`report_vlsm_${new Date().toISOString().slice(0, 10)}.csv`, toCsv(okSommari))}
                 disabled={ok.length === 0}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
               >
-                📥 Scarica CSV
+                <Download size={15} /> Scarica CSV
               </button>
               <button
                 className="btn"
                 type="button"
                 onClick={downloadReportPdf}
                 disabled={ok.length === 0 || generatingPdf}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
               >
-                {generatingPdf ? 'Generazione PDF…' : '📄 Scarica PDF riepilogo'}
+                <FileText size={15} /> {generatingPdf ? 'Generazione PDF…' : 'Scarica PDF riepilogo'}
               </button>
             </div>
             {pdfError && <div className="error-msg" style={{ marginTop: '0.5rem' }}>{pdfError}</div>}
             <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-              {stats.valid > 0 && <span style={badgeStyle('valid')}>✅ {stats.valid} firma valida</span>}
-              {stats.invalid > 0 && <span style={badgeStyle('invalid')}>❌ {stats.invalid} manomessi</span>}
-              {stats.unsigned > 0 && <span style={badgeStyle('unsigned')}>⚠️ {stats.unsigned} non firmati</span>}
-              {stats.unavailable > 0 && <span style={badgeStyle('unavailable')}>⏳ {stats.unavailable} firma non verificabile</span>}
+              {stats.valid > 0 && <span style={badgeStyle('valid')}>{stats.valid} firma valida</span>}
+              {stats.invalid > 0 && <span style={badgeStyle('invalid')}>{stats.invalid} manomessi</span>}
+              {stats.unsigned > 0 && <span style={badgeStyle('unsigned')}>{stats.unsigned} non firmati</span>}
+              {stats.unavailable > 0 && <span style={badgeStyle('unavailable')}>{stats.unavailable} firma non verificabile</span>}
             </div>
           </>
         )}
@@ -288,7 +274,7 @@ export function AdminScreen({ onExit }: Props) {
       )}
         </>
       )}
-    </>
+    </SidebarShell>
   );
 }
 
@@ -319,7 +305,7 @@ function SezioneTabella({ titolo, rows, esercitazione = false }: { titolo: strin
               const tempoFuori = eventi.reduce((a, e) => a + e.durataMs, 0);
               return (
                 <tr key={i} style={p.verify === 'invalid' ? { background: 'var(--error-bg)' } : undefined}>
-                  <td><span style={badgeStyle(p.verify)}>{badgeLabel(p.verify)}</span></td>
+                  <td><span style={badgeStyle(p.verify)}>{badgeContent(p.verify)}</span></td>
                   <td>{r.nome}</td>
                   <td>{r.classe}</td>
                   <td>{r.verificaTitolo}</td>

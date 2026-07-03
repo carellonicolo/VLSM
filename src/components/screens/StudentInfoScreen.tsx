@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Target, ClipboardCheck, AlertTriangle, Dices, Clock } from 'lucide-react';
 import type { Categoria, DatiStudente, Difficolta, VerificaId } from '../../types/domain';
 import { DIFFICOLTA_ORDER } from '../../types/domain';
 import { pickVerifica } from '../../lib/pickVerifica';
@@ -67,7 +68,9 @@ export function StudentInfoScreen({ studente, durataMin, categoria, examLevel, o
 
   return (
     <form className="card" onSubmit={submit} style={{ maxWidth: 560, margin: '2rem auto' }}>
-      <h2 style={{ marginTop: 0 }}>{isEsercitazione ? '🎯 Esercitazione libera' : '📝 Inizia la verifica'}</h2>
+      <h2 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+        {isEsercitazione ? <><Target size={22} /> Esercitazione libera</> : <><ClipboardCheck size={22} /> Inizia la verifica</>}
+      </h2>
 
       <div className="identity-box">
         <div><span className="muted">Studente:</span> <strong>{studente.nome}</strong></div>
@@ -82,7 +85,7 @@ export function StudentInfoScreen({ studente, durataMin, categoria, examLevel, o
 
       {!isEsercitazione && (
         <div className="warn-banner">
-          <strong>⚠️ ATTENZIONE — La verifica è monitorata</strong>
+          <strong style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><AlertTriangle size={17} /> ATTENZIONE — La verifica è monitorata</strong>
           <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.9rem' }}>
             Durante lo svolgimento il sistema registra ogni uscita dalla pagina (cambio scheda, minimizzazione,
             apertura di altre app) e gli eventuali interventi del docente (alert, ammonizioni). Il docente può
@@ -119,7 +122,7 @@ export function StudentInfoScreen({ studente, durataMin, categoria, examLevel, o
             <div className="identity-box" style={{ margin: 0 }}>
               {lockedLevel
                 ? <span>Impostato dal docente: <strong>{lockedLevel}</strong></span>
-                : <span>🎲 <strong>Casuale</strong> — sorteggiato all'avvio</span>}
+                : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Dices size={16} /> <strong>Casuale</strong> — sorteggiato all'avvio</span>}
             </div>
           )}
         </div>
@@ -141,9 +144,9 @@ export function StudentInfoScreen({ studente, durataMin, categoria, examLevel, o
         </div>
       </div>
 
-      <button className="btn" type="submit" disabled={!valid || checkingRecover} style={{ width: '100%' }}>
+      <button className="btn" type="submit" disabled={!valid || checkingRecover} style={{ width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
         {checkingRecover
-          ? '⏳ Verifico se hai una sessione interrotta…'
+          ? <><Clock size={16} /> Verifico se hai una sessione interrotta…</>
           : isEsercitazione
             ? 'Sorteggia simulazione e inizia'
             : 'Sorteggia verifica e inizia'}

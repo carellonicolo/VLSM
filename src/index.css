@@ -678,14 +678,14 @@ label {
    Approccio "doppio": la cella ha sfondo blu tenue, l'input dentro ha bordo
    tratteggiato e sfondo chiaro per stare in contrasto con la cella. */
 .alloc-table td:not(.readonly) {
-  background: rgba(11, 61, 145, 0.09);
+  background: rgba(224, 102, 43, 0.08);
   position: relative;
 }
 
 .alloc-table td input {
   width: 100%;
   background: var(--input-bg);
-  border: 2px dashed rgba(11, 61, 145, 0.55);
+  border: 2px dashed rgba(224, 102, 43, 0.55);
   border-radius: 5px;
   color: var(--fg);
   font-family: 'Menlo', 'Consolas', monospace;
@@ -696,39 +696,39 @@ label {
 }
 
 .alloc-table td input::placeholder {
-  color: rgba(11, 61, 145, 0.45);
+  color: rgba(224, 102, 43, 0.45);
   font-style: italic;
 }
 
 .alloc-table td input:hover {
-  background: rgba(255, 251, 230, 0.6);
-  border-color: rgba(11, 61, 145, 0.85);
+  background: rgba(255, 247, 239, 0.6);
+  border-color: rgba(224, 102, 43, 0.85);
 }
 
 .alloc-table td input:focus {
   background: var(--input-focus-bg);
   border: 2px solid var(--primary);
-  outline: 3px solid rgba(11, 61, 145, 0.18);
+  outline: 3px solid rgba(224, 102, 43, 0.18);
   outline-offset: 0;
   transform: scale(1.01);
 }
 
 [data-theme='dark'] .alloc-table td:not(.readonly) {
-  background: rgba(59, 130, 246, 0.14);
+  background: rgba(238, 123, 67, 0.14);
 }
 
 [data-theme='dark'] .alloc-table td input {
   background: var(--input-bg);
-  border-color: rgba(59, 130, 246, 0.6);
+  border-color: rgba(238, 123, 67, 0.6);
 }
 
 [data-theme='dark'] .alloc-table td input:hover {
-  background: #1e3a8a;
-  border-color: rgba(59, 130, 246, 0.85);
+  background: #3a2a1e;
+  border-color: rgba(238, 123, 67, 0.85);
 }
 
 [data-theme='dark'] .alloc-table td input:focus {
-  outline-color: rgba(59, 130, 246, 0.3);
+  outline-color: rgba(238, 123, 67, 0.3);
 }
 
 /* Read-only context cells: chiaramente diverse - sfondo a strisce diagonali
@@ -790,7 +790,7 @@ label {
 
 .legend-sample-empty {
   background: var(--input-bg);
-  border: 2px dashed rgba(11, 61, 145, 0.55);
+  border: 2px dashed rgba(224, 102, 43, 0.55);
   color: var(--primary);
 }
 
@@ -821,18 +821,41 @@ label {
 }
 
 .voto-box {
-  background: var(--primary);
+  background: linear-gradient(135deg, #c9551f 0%, #e0662b 50%, #ed8a3e 100%);
   color: white;
-  border-radius: 10px;
-  padding: 1.5rem;
+  border-radius: 20px;
+  padding: 1.75rem 1.5rem;
   text-align: center;
   margin-bottom: 1.5rem;
+  box-shadow: 0 12px 30px rgba(224, 102, 43, 0.28);
+}
+.voto-box .voto-box-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+.voto-box .voto-box-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
 }
 
 .voto-box .voto30 {
-  font-size: 3rem;
-  font-weight: 700;
+  font-family: var(--carello-font-mono, 'JetBrains Mono', monospace);
+  font-size: 2.9rem;
+  font-weight: 800;
   margin: 0;
+  letter-spacing: -0.01em;
 }
 
 .voto-box .voto10 {
@@ -965,6 +988,62 @@ label {
   background: var(--success-bg);
   color: var(--success);
   border-color: var(--success);
+}
+
+/* --- Barra di stato svolgimento verifica: progresso celle + chip monitor --- */
+.test-substatus {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+.test-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: 1;
+  min-width: 200px;
+}
+.test-progress-track {
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--readonly-bg);
+  overflow: hidden;
+}
+.test-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--primary);
+  transition: width 0.25s ease;
+}
+.test-progress-label {
+  font-size: 0.82rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.monitor-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.monitor-chip.zero {
+  background: var(--success-bg);
+  color: var(--success);
+  border: 1px solid var(--success);
+}
+.monitor-chip.warn {
+  background: var(--warn-bg);
+  color: var(--warn-text);
+  border: 1px solid var(--warn-border);
 }
 
 .alert-overlay {
@@ -1215,6 +1294,34 @@ label {
 .landing-card-icon {
   font-size: 2rem;
   line-height: 1;
+  color: var(--primary);
+}
+
+/* Icona brand dell'hero: quadrato 64×64 con gradiente arancio Carello. */
+.landing-hero-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  margin: 0 auto 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #ff8a4c 0%, #e0662b 100%);
+  box-shadow: 0 8px 20px rgba(224, 102, 43, 0.32);
+}
+
+/* Tile scura "Modalità docente". */
+.landing-card-dark {
+  background: #23201c;
+  border-color: #23201c;
+}
+.landing-card-dark .landing-card-title,
+.landing-card-dark .landing-card-icon { color: #fff; }
+.landing-card-dark .landing-card-text { color: #c9bfb2; }
+.landing-card-dark .landing-card-cta { color: #ff8a4c; }
+[data-theme='dark'] .landing-card-dark {
+  background: #100e0c;
+  border-color: #100e0c;
 }
 
 .landing-card-title {
@@ -1268,6 +1375,25 @@ label {
   gap: 1rem;
   margin: 0.5rem 0 1.5rem;
 }
+
+/* Look "a segmenti pill" per le barre strumenti dei calcolatori. Ambito
+   ristretto a .calc-tabs-bar: non tocca il componente shadcn Tabs condiviso.
+   La voce attiva diventa arancio pieno (var(--primary)). */
+.calc-tabs-bar [role='tablist'] {
+  background: var(--readonly-bg);
+  border-radius: 999px;
+  gap: 2px;
+}
+.calc-tabs-bar [role='tab'] {
+  border-radius: 999px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.calc-tabs-bar [role='tab'][data-state='active'] {
+  background: var(--primary);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(224, 102, 43, 0.32);
+}
+.calc-tabs-bar [role='tab'][data-state='active'] svg { color: #fff; }
 
 .calc-content {
   display: flex;
@@ -1629,5 +1755,104 @@ label {
 @keyframes admin-overlay-in {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+/* ============================================================
+   SIDEBAR SHELL — guscio condiviso studente/docente
+   (usa le variabili del tema così la dark mode resta valida)
+   ============================================================ */
+.sidebar-shell {
+  display: flex;
+  align-items: stretch;
+  min-height: calc(100vh - 60px);
+}
+.sidebar-nav {
+  width: 220px;
+  flex-shrink: 0;
+  background: var(--card);
+  border-right: 1px solid var(--border);
+  padding: 20px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.sidebar-group-label {
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  color: var(--fg);
+  font-size: 14px;
+  font-weight: 500;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  font-family: inherit;
+}
+.sidebar-item:hover { background: var(--readonly-bg); }
+.sidebar-item.active {
+  background: var(--input-focus-bg);
+  color: var(--primary);
+  font-weight: 600;
+}
+.sidebar-item.active svg { stroke: var(--primary); }
+.sidebar-item > span:first-of-type { flex: 1; }
+.sidebar-badge {
+  margin-left: auto;
+  background: var(--primary);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 1px 7px;
+}
+.sidebar-dot {
+  margin-left: auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--success);
+}
+.sidebar-footer {
+  margin-top: auto;
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+.sidebar-content {
+  flex: 1;
+  min-width: 0;
+  padding: 28px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+@media (max-width: 760px) {
+  .sidebar-shell { flex-direction: column; }
+  .sidebar-nav {
+    width: 100%;
+    flex-direction: row;
+    overflow-x: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    padding: 12px;
+  }
+  .sidebar-group-label { display: none; }
+  .sidebar-item { width: auto; white-space: nowrap; }
+  .sidebar-footer { display: none; }
+  .sidebar-content { padding: 20px 16px; }
 }
 

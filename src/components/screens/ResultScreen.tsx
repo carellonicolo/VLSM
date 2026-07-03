@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Target, Clock, Check, AlertTriangle, Download, LifeBuoy, RotateCw } from 'lucide-react';
 import type { EsitoFinale } from '../../types/domain';
 import { ETICHETTE_VLSM, ETICHETTE_PARAMETRI, ETICHETTE_RESIDUI } from '../../lib/grading';
 import { formatDuration, formatTimeOfDay } from '../../lib/format';
@@ -37,6 +38,7 @@ export function ResultScreen({ esito, onNuovaSessione }: Props) {
   const [pdfDownloaded, setPdfDownloaded] = useState(false);
   const [pdfState, setPdfState] = useState<'idle' | 'generating' | 'error'>('idle');
   const [pdfError, setPdfError] = useState<string | null>(null);
+  const [soloErrori, setSoloErrori] = useState(false);
 
   const baseFileName = `vlsm_${safeFileName(esito.studente.nome)}_${esito.verificaId}`;
 
@@ -74,17 +76,24 @@ export function ResultScreen({ esito, onNuovaSessione }: Props) {
   return (
     <>
       {esito.categoria === 'esercitazione' && (
-        <div className="card" style={{ background: 'var(--warn-bg)', borderColor: 'var(--warn-border)', color: 'var(--warn-text)', textAlign: 'center', padding: '0.75rem' }}>
-          <strong>🎯 Esercitazione libera</strong> — Questo risultato è solo di pratica, non viene registrato come verifica ufficiale.
+        <div className="card" style={{ background: 'var(--warn-bg)', borderColor: 'var(--warn-border)', color: 'var(--warn-text)', textAlign: 'center', padding: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+          <Target size={16} /> <strong>Esercitazione libera</strong> — Questo risultato è solo di pratica, non viene registrato come verifica ufficiale.
         </div>
       )}
 
-      <div className="voto-box" style={esito.categoria === 'esercitazione' ? { background: '#7c5d00' } : undefined}>
+      <div className="voto-box" style={esito.categoria === 'esercitazione' ? { background: 'linear-gradient(135deg, #8a6d12 0%, #b8860b 100%)', boxShadow: '0 12px 30px rgba(184,134,11,.28)' } : undefined}>
+        <div className="voto-box-head">
+          <strong>{esito.studente.nome}</strong>
+          {esito.studente.classe ? <span>· {esito.studente.classe}</span> : null}
+          <span className="voto-box-badge">
+            {esito.categoria === 'verifica' ? <><Check size={13} /> Consegnata</> : <><Target size={13} /> Pratica</>}
+          </span>
+        </div>
         <p className="voto30">{esito.voto30}/30</p>
         <div className="voto10">Equivalente in decimi: {esito.voto10}/10</div>
         {esito.motivoConsegna === 'timeout' && (
-          <div style={{ marginTop: '0.5rem', fontSize: '0.9rem' }}>
-            ⏱ Consegna automatica per scadenza del tempo
+          <div style={{ marginTop: '0.5rem', fontSize: '0.9rem', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <Clock size={14} /> Consegna automatica per scadenza del tempo
           </div>
         )}
       </div>
@@ -118,7 +127,7 @@ export function ResultScreen({ esito, onNuovaSessione }: Props) {
                 padding: '0.85rem 1rem',
               }}
             >
-              <strong>✓ Note di sessione</strong> — Nessuna distrazione rilevata durante la verifica.
+              <strong style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Check size={15} /> Note di sessione</strong> — Nessuna distrazione rilevata durante la verifica.
             </div>
           );
         }
@@ -131,8 +140,8 @@ export function ResultScreen({ esito, onNuovaSessione }: Props) {
               color: 'var(--error-text)',
             }}
           >
-            <h3 style={{ marginTop: 0, color: 'var(--error)' }}>
-              ⚠ Note di sessione — {eventi.length} abbandono{eventi.length === 1 ? '' : 'i'} della pagina
+            <h3 style={{ marginTop: 0, color: 'var(--error)', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <AlertTriangle size={18} /> Note di sessione — {eventi.length} abbandono{eventi.length === 1 ? '' : 'i'} della pagina
             </h3>
             <p style={{ margin: '0 0 0.75rem 0' }}>
               Tempo totale lontano dalla verifica: <strong>{formatDuration(tempoFuori)}</strong>.
@@ -161,45 +170,62 @@ export function ResultScreen({ esito, onNuovaSessione }: Props) {
       })()}
 
       <div className="card">
-        <h3 style={{ marginTop: 0 }}>Dettaglio per esercizio</h3>
-        {esito.esercizi.map((e) => (
-          <details key={e.esercizioId} open>
-            <summary style={{ cursor: 'pointer', padding: '0.4rem 0' }}>
-              <strong>{e.titolo}</strong> — {e.punteggio}/{e.puntiMax} pt
-            </summary>
-            {e.righe.length > 0 && (
-              <table className="result-table">
-                <thead>
-                  <tr>
-                    <th>Riga</th>
-                    {Object.keys(e.righe[0].celle).map((col) => (
-                      <th key={col}>{labelFor(e.esercizioId, col)}</th>
-                    ))}
-                    <th>Pt</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {e.righe.map((r) => (
-                    <tr key={r.rowKey}>
-                      <td className="readonly">{r.rowKey}</td>
-                      {Object.entries(r.celle).map(([col, c]) => (
-                        <td key={col} className={`cella-${c.stato}`}>
-                          {c.valoreStudente || <span className="muted">—</span>}
-                          {c.stato !== 'corretto' && (
-                            <span className="cella-attesa">✓ {c.valoreAtteso}</span>
-                          )}
-                        </td>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+          <h3 style={{ marginTop: 0, marginBottom: 0 }}>Dettaglio per esercizio</h3>
+          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '0.88rem', color: 'var(--muted)', cursor: 'pointer' }}>
+            <input type="checkbox" checked={soloErrori} onChange={(e) => setSoloErrori(e.target.checked)} />
+            Mostra solo gli errori
+          </label>
+        </div>
+        {esito.esercizi.map((e) => {
+          const righeMostrate = soloErrori
+            ? e.righe.filter((r) => Object.values(r.celle).some((c) => c.stato !== 'corretto'))
+            : e.righe;
+          if (soloErrori && righeMostrate.length === 0) return null;
+          return (
+            <details key={e.esercizioId} open>
+              <summary style={{ cursor: 'pointer', padding: '0.4rem 0' }}>
+                <strong>{e.titolo}</strong> — {e.punteggio}/{e.puntiMax} pt
+              </summary>
+              {e.righe.length > 0 && (
+                <table className="result-table">
+                  <thead>
+                    <tr>
+                      <th>Riga</th>
+                      {Object.keys(e.righe[0].celle).map((col) => (
+                        <th key={col}>{labelFor(e.esercizioId, col)}</th>
                       ))}
-                      <td>
-                        {Math.round(r.punteggio * 10) / 10}/{Math.round(r.puntiMax * 10) / 10}
-                      </td>
+                      <th>Pt</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </details>
-        ))}
+                  </thead>
+                  <tbody>
+                    {righeMostrate.map((r) => (
+                      <tr key={r.rowKey}>
+                        <td className="readonly">{r.rowKey}</td>
+                        {Object.entries(r.celle).map(([col, c]) => (
+                          <td key={col} className={`cella-${c.stato}`}>
+                            {c.valoreStudente || <span className="muted">—</span>}
+                            {c.stato !== 'corretto' && (
+                              <span className="cella-attesa">✓ {c.valoreAtteso}</span>
+                            )}
+                          </td>
+                        ))}
+                        <td>
+                          {Math.round(r.punteggio * 10) / 10}/{Math.round(r.puntiMax * 10) / 10}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </details>
+          );
+        })}
+        {soloErrori && esito.esercizi.every((e) => e.righe.every((r) => Object.values(r.celle).every((c) => c.stato === 'corretto'))) && (
+          <p className="muted" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Check size={15} color="var(--success)" /> Nessun errore: tutte le celle sono corrette.
+          </p>
+        )}
       </div>
 
       <div className="card">
@@ -212,16 +238,18 @@ export function ResultScreen({ esito, onNuovaSessione }: Props) {
             type="button"
             onClick={downloadPdf}
             disabled={pdfState === 'generating'}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
           >
-            {pdfState === 'generating' ? '⏳ Generazione PDF…' : '📥 Scarica PDF'}
+            {pdfState === 'generating' ? <><Clock size={15} /> Generazione PDF…</> : <><Download size={15} /> Scarica PDF</>}
           </button>
           <button
             className="btn btn-secondary"
             type="button"
             onClick={downloadJsonBackup}
             title="Backup completo dell'esito in formato JSON, da consegnare al docente in caso il PDF non funzioni"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
           >
-            🛟 Scarica backup JSON
+            <LifeBuoy size={15} /> Scarica backup JSON
           </button>
         </div>
         {pdfState === 'error' && (
@@ -231,7 +259,7 @@ export function ResultScreen({ esito, onNuovaSessione }: Props) {
           >
             <strong>Errore nella generazione del PDF:</strong> {pdfError}
             <div style={{ marginTop: '0.4rem' }}>
-              <button className="btn-secondary btn" type="button" onClick={downloadPdf}>Riprova PDF</button>
+              <button className="btn-secondary btn" type="button" onClick={downloadPdf} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><RotateCw size={14} /> Riprova PDF</button>
               {' '}oppure usa il backup JSON qui sopra: il docente può ricostruire la consegna anche da quello.
             </div>
           </div>
