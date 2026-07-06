@@ -458,7 +458,7 @@
         #crumbIcon{ display:inline-flex; width:18px; height:18px; }
         #crumbIcon svg{ width:18px; height:18px; }
         .spacer{ flex:1; }
-        .actions{ display:flex; align-items:center; gap:4px; }
+        .actions{ display:flex; align-items:center; gap:4px; flex-shrink:0; }
         .icbtn{ width:38px; height:38px; border-radius:999px; display:flex; align-items:center; justify-content:center;
                 color:var(--c-icon); background:transparent; border:none; cursor:pointer; }
         .icbtn:hover{ background:var(--c-hover); }
@@ -506,6 +506,16 @@
         .folderico{ padding:8px; box-sizing:border-box; }
         .mini{ display:grid; grid-template-columns:1fr 1fr; grid-auto-rows:1fr; gap:3px; width:100%; height:100%; }
         .mini i{ display:block; border-radius:4px; min-height:0; }
+        /* Mobile: la barra non ha spazio per "Prof. Carello / Nome app" + azioni.
+           Nascondiamo il nome-brand (resta il logo) e stringiamo le spaziature, così
+           logo + nome-app + controlli stanno senza sovrapporsi. Il breadcrumb non
+           deborda più (min-width:0 + overflow:hidden). */
+        @media (max-width:560px){
+          .bar{ gap:8px; padding:0 12px; }
+          .name, .sep{ display:none; }
+          .brand{ overflow:hidden; }
+          .crumb{ min-width:0; overflow:hidden; }
+        }
       </style>
       <div class="bar">
         <div class="brand">
