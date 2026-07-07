@@ -78,9 +78,9 @@
 
   // Tema: replica ESATTA della logica dell'app (hook useTheme + bootstrap in
   // index.html). Sorgente di verità = attributo data-theme su <html>, classe
-  // .dark e chiave localStorage 'ccna1_theme'. Così il pulsante tema della
+  // .dark e chiave localStorage 'nc_theme'. Così il pulsante tema della
   // shell sostituisce il vecchio ThemeToggle senza toccare la logica React.
-  const THEME_KEY = 'vlsm_theme';
+  const THEME_KEY = 'nc_theme';
   function readTheme() {
     return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
   }

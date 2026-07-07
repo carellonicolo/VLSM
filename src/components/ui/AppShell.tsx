@@ -25,7 +25,8 @@ export function AppShell({ children, back }: Props) {
     <div className="shell">
       {/* Top bar unificata Carello: brand, breadcrumb (nome app → home),
           launcher, tema e avatar con dropdown Profilo / Dashboard VLSM / Logout.
-          Sostituisce il vecchio <Header>. Il pulsante tema scrive su `vlsm_theme`. */}
+          Sostituisce il vecchio <Header>. Il pulsante tema scrive su `nc_theme`
+          (chiave unificata tra tutte le app). */}
       <carello-shell
         app-name="VLSM Test"
         app-icon="Network"

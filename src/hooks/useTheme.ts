@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react';
 
 export type Theme = 'light' | 'dark';
-const KEY = 'vlsm_theme';
+// Chiave unificata tra tutte le app del prof; 'vlsm_theme' è la vecchia chiave,
+// letta come fallback per non perdere la preferenza già salvata.
+const KEY = 'nc_theme';
+const LEGACY_KEY = 'vlsm_theme';
 
 function getInitialTheme(): Theme {
   if (typeof window === 'undefined') return 'light';
   const current = document.documentElement.getAttribute('data-theme');
   if (current === 'light' || current === 'dark') return current;
   try {
-    const stored = localStorage.getItem(KEY);
+    const stored = localStorage.getItem(KEY) || localStorage.getItem(LEGACY_KEY);
     if (stored === 'light' || stored === 'dark') return stored;
   } catch {
     // ignore

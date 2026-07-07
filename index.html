@@ -19,7 +19,8 @@
     <script>
       (function () {
         try {
-          var stored = localStorage.getItem('vlsm_theme');
+          var stored = localStorage.getItem('nc_theme') || localStorage.getItem('vlsm_theme');
+          if (stored && !localStorage.getItem('nc_theme')) localStorage.setItem('nc_theme', stored);
           var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
           document.documentElement.setAttribute('data-theme', theme);
           if (theme === 'dark') document.documentElement.classList.add('dark');
