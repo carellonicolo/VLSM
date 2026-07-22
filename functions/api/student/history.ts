@@ -1,5 +1,5 @@
 import { jsonError, jsonOk, type SharedEnv } from '../../_lib/shared';
-import { loadStudentFromSession } from '../../_lib/student';
+import { getStudentRow } from '../../_lib/student';
 
 /**
  * GET /api/student/history — storico completo (verifiche + esercitazioni)
@@ -7,7 +7,7 @@ import { loadStudentFromSession } from '../../_lib/student';
  * (medie, trend) vengono calcolate lato client da questa lista.
  */
 export const onRequestGet: PagesFunction<SharedEnv> = async ({ request, env }) => {
-  const auth = await loadStudentFromSession(request, env);
+  const auth = await getStudentRow(request, env);
   if (auth instanceof Response) return auth;
 
   try {

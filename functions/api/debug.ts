@@ -1,9 +1,12 @@
 /**
  * Endpoint diagnostico: NON espone valori, solo presenza/assenza dei binding
  * e raggiungibilità dell'Identity Provider SSO.
- * Da rimuovere o nascondere dopo il setup iniziale se vuoi essere paranoico.
+ *
+ * RISERVATO AL DOCENTE (super-admin SSO): pur non svelando segreti, non deve
+ * essere ricognizione gratuita per chiunque.
  */
 import { verifySession } from '../_lib/sso';
+import { requireSuperAdmin } from '../_lib/shared';
 
 interface Env {
   DB: D1Database;
@@ -11,6 +14,9 @@ interface Env {
 }
 
 export const onRequestGet: PagesFunction<Env> = async ({ env, request }) => {
+  const auth = await requireSuperAdmin(request);
+  if (auth instanceof Response) return auth;
+
   const info: Record<string, unknown> = {
     hasDB: typeof env.DB !== 'undefined' && env.DB !== null,
     hasHmacSecret: typeof env.VLSM_HMAC_SECRET === 'string' && env.VLSM_HMAC_SECRET.length > 0,

@@ -1,5 +1,5 @@
 import { jsonError, jsonOk, type SharedEnv } from '../../../_lib/shared';
-import { loadStudentFromSession } from '../../../_lib/student';
+import { getStudentRow } from '../../../_lib/student';
 
 /**
  * GET /api/student/session/events?since=<lastId> — canale comandi del docente.
@@ -10,7 +10,7 @@ import { loadStudentFromSession } from '../../../_lib/student';
  * Il client fa polling ogni pochi secondi durante la prova.
  */
 export const onRequestGet: PagesFunction<SharedEnv> = async ({ request, env }) => {
-  const auth = await loadStudentFromSession(request, env);
+  const auth = await getStudentRow(request, env);
   if (auth instanceof Response) return auth;
 
   const url = new URL(request.url);

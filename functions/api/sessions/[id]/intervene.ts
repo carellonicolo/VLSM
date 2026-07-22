@@ -13,7 +13,7 @@ const ALLOWED = new Set(['alert', 'ammonizione', 'annulla']);
  *  - alert       → messaggio momentaneo allo studente;
  *  - ammonizione → ammonizione registrata (compare su PDF/report);
  *  - annulla     → la prova viene interrotta: state='annullata' + motivo.
- * Lo studente riceve l'evento al successivo polling. Solo password docente.
+ * Lo studente riceve l'evento al successivo polling. Solo docente (super-admin SSO).
  */
 export const onRequestPost: PagesFunction<SharedEnv> = async ({ params, request, env }) => {
   const auth = await requireSuperAdmin(request);

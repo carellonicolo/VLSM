@@ -17,30 +17,47 @@ export interface StudentSavePayload {
   eventiFocus: EventoFocus[];
   state: 'in_progress' | 'consegnata' | 'abbandonata';
   consegnatoAt?: string;
-  esito?: EsitoFinale;
-  voto30?: number;
-  signature?: string;
-  signedAt?: string;
   motivoConsegna?: 'volontaria' | 'timeout';
   clientId?: string;
+  // Nota: voto/esito/firma NON vengono più inviati. Sono ricalcolati e firmati
+  // esclusivamente dal server (vedi functions/api/student/session/save.ts).
+}
+
+/** Esito AUTOREVOLE ricalcolato e firmato dal server, restituito alla consegna. */
+export interface GradedResult {
+  voto30: number;
+  signature: string | null;
+  signedAt: string | null;
+  esito: EsitoFinale;
 }
 
 export interface StudentSaveResult {
   ok: boolean;
   id?: string;
   updatedAt?: string;
+  deadlineAt?: string;
+  graded?: GradedResult;
   error?: string;
   annullata?: boolean;
 }
 
 export async function studentSaveSession(payload: StudentSavePayload): Promise<StudentSaveResult> {
-  const res = await authFetch<{ ok: boolean; id?: string; updatedAt?: string; state?: string }>(
-    '/api/student/session/save',
-    { method: 'POST', body: JSON.stringify(payload) },
-    8000
-  );
+  const res = await authFetch<{
+    ok: boolean;
+    id?: string;
+    updatedAt?: string;
+    deadlineAt?: string;
+    graded?: GradedResult;
+    state?: string;
+  }>('/api/student/session/save', { method: 'POST', body: JSON.stringify(payload) }, 8000);
   if (res.ok && res.data?.ok) {
-    return { ok: true, id: res.data.id, updatedAt: res.data.updatedAt };
+    return {
+      ok: true,
+      id: res.data.id,
+      updatedAt: res.data.updatedAt,
+      deadlineAt: res.data.deadlineAt,
+      graded: res.data.graded,
+    };
   }
   const annullata = res.status === 409 && (res.data as { state?: string } | undefined)?.state === 'annullata';
   return { ok: false, error: res.error, annullata };

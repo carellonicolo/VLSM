@@ -1,32 +1,13 @@
 import type { EsitoSommario } from './pdfData';
 
-export interface SignatureResult {
-  signature: string;
-  signedAt: string;
-}
+/**
+ * VERIFICA della firma di un esito. La FIRMA non viene più generata dal client:
+ * è prodotta esclusivamente dal server alla consegna (vedi
+ * functions/api/student/session/save.ts + functions/_lib/grade.ts). Qui resta
+ * solo la verifica, che è un'operazione sicura da esporre pubblicamente.
+ */
 
 const TIMEOUT_MS = 6000;
-
-export async function signSommario(sommario: EsitoSommario): Promise<SignatureResult | null> {
-  const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
-  try {
-    const res = await fetch('/api/sign', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(sommario),
-      signal: ctrl.signal,
-    });
-    if (!res.ok) return null;
-    const data = (await res.json()) as SignatureResult;
-    if (!data.signature || !data.signedAt) return null;
-    return data;
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(t);
-  }
-}
 
 export type VerifyStatus = 'valid' | 'invalid' | 'unsigned' | 'unavailable';
 
