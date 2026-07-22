@@ -33,6 +33,8 @@ export function AppShell({ children, back }: Props) {
         user="NC"
         data-hub-url="https://nicolocarello.it"
         data-auth-url="https://auth.nicolocarello.it"
+        data-theme-key="vlsm_theme"
+        data-console-url="https://auth.nicolocarello.it/admin"
         data-dash-url="/dashboard"
         data-dash-label="Dashboard VLSM"
       />
