@@ -177,3 +177,33 @@ describe('isAligned / blockContains', () => {
     expect(blockContains(outer, { net: parseIp('10.4.16.0'), prefix: 24 })).toBe(false);
   });
 });
+
+// Regressione: i confini "end-exclusive" possono valere 2^32 (blocco che termina
+// a 255.255.255.255) o con prefisso /0. Con `>>> 0` wrappavano a 0, causando
+// falsi "spazio insufficiente" / residui mancanti / blockContains errato.
+describe('edge case: fine dello spazio di indirizzi e /0', () => {
+  it('allocateVlsm riempie un /24 che termina a 255.255.255.255', () => {
+    const parent = { ip: parseIp('255.255.255.0'), prefix: 24 };
+    const out = allocateVlsm(parent, [
+      { nome: 'A', host: 100 },
+      { nome: 'B', host: 100 },
+    ]);
+    expect(out.map((a) => `${a.nome}:${formatIp(a.net)}/${a.prefix}`)).toEqual([
+      'A:255.255.255.0/25',
+      'B:255.255.255.128/25',
+    ]);
+  });
+
+  it('findResidualBlocks trova il residuo fino a 255.255.255.255', () => {
+    const parent = { net: parseIp('255.255.255.0'), prefix: 24 };
+    const allocated = [{ net: parseIp('255.255.255.0'), prefix: 25 }];
+    const out = findResidualBlocks(parent, allocated);
+    expect(out.map((b) => `${formatIp(b.net)}/${b.prefix}`)).toEqual(['255.255.255.128/25']);
+  });
+
+  it('blockContains con outer /0 contiene qualsiasi blocco', () => {
+    const outer = { net: 0, prefix: 0 };
+    expect(blockContains(outer, { net: parseIp('10.0.0.0'), prefix: 8 })).toBe(true);
+    expect(blockContains(outer, { net: parseIp('255.255.255.0'), prefix: 24 })).toBe(true);
+  });
+});

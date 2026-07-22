@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSession } from '../../hooks/useSession';
 import { useTheme } from '../../hooks/useTheme';
@@ -22,8 +22,6 @@ import { HomeLink } from '../ui/HomeLink';
 import { AccountMenu } from '../ui/AccountMenu';
 import { getVerifica } from '../../data/verifiche';
 import { gradeVerifica } from '../../lib/grading';
-import { buildSommario } from '../../lib/pdfData';
-import { signSommario } from '../../lib/pdfSign';
 
 interface Props {
   categoria: 'verifica' | 'esercitazione';
@@ -131,6 +129,7 @@ export function TestFlow({ categoria }: Props) {
 
   const [signing, setSigning] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const adoptedGraded = useRef<unknown>(null);
 
   const submit = useCallback(
     async (motivo: MotivoConsegna) => {
@@ -150,28 +149,42 @@ export function TestFlow({ categoria }: Props) {
         return;
       }
 
-      setSigning(true);
-      let sig = null;
+      // Mostra subito l'esito provvisorio (voto client, non firmato). Il VOTO e la
+      // FIRMA definitivi sono ricalcolati e generati dal server alla consegna e
+      // vengono adottati quando arrivano (effetto su cloud.graded, sotto).
+      if (categoria === 'verifica') setSigning(true);
       try {
-        sig = await signSommario(buildSommario(esito));
-      } catch (e) {
-        // eslint-disable-next-line no-console
-        console.error('signSommario failed', e);
-      }
-      setSigning(false);
-
-      const finalEsito = sig ? { ...esito, signature: sig.signature, signedAt: sig.signedAt } : esito;
-      try {
-        setEsito(finalEsito);
+        setEsito(esito);
         void cloud.flush();
       } catch (e) {
         // eslint-disable-next-line no-console
         console.error('setEsito failed', e);
+        setSigning(false);
         setSubmitError('Errore nel salvataggio della consegna. Riprova oppure ricarica la pagina (i dati restano salvati).');
       }
     },
-    [verifica, session.answers, session.studente, session.startedAt, session.eventiFocus, annulled, commands.ammonizioni, setEsito, cloud]
+    [verifica, session.answers, session.studente, session.startedAt, session.eventiFocus, annulled, commands.ammonizioni, setEsito, cloud, categoria]
   );
+
+  // Adotta l'esito AUTOREVOLE (voto + firma) ricalcolato e firmato dal server.
+  // Ogni oggetto `graded` viene adottato una sola volta (confronto per riferimento).
+  useEffect(() => {
+    if (!cloud.graded || adoptedGraded.current === cloud.graded) return;
+    adoptedGraded.current = cloud.graded;
+    setEsito(cloud.graded.esito);
+    setSigning(false);
+  }, [cloud.graded, setEsito]);
+
+  // Sblocca l'indicatore "firma in corso" se il server è irraggiungibile (PDF non firmato).
+  useEffect(() => {
+    if (!signing) return;
+    if (cloud.status === 'error' || cloud.status === 'offline') {
+      setSigning(false);
+      return;
+    }
+    const t = setTimeout(() => setSigning(false), 9000);
+    return () => clearTimeout(t);
+  }, [signing, cloud.status]);
 
   useEffect(() => {
     if (!annulled && session.phase === 'test' && session.deadlineMs && Date.now() >= session.deadlineMs) {
@@ -313,6 +326,16 @@ export function TestFlow({ categoria }: Props) {
     return (
       <div className="shell">
         <Header actions={themeToggle} />
+        {signing && (
+          <div
+            className="card"
+            role="status"
+            aria-live="polite"
+            style={{ textAlign: 'center', padding: '0.6rem 0.9rem', color: 'var(--muted)' }}
+          >
+            🖊️ Firma digitale in corso… attendi un istante prima di scaricare il PDF.
+          </div>
+        )}
         <ResultScreen esito={session.esito} onNuovaSessione={exitToDashboard} />
         <Footer />
       </div>

@@ -197,3 +197,16 @@ describe('normalizzazione input', () => {
     expect(esito2.voto30).toBe(30);
   });
 });
+
+// Il voto in decimi è derivato come voto30 / 3: presuppone che OGNI prova valga
+// esattamente 30 punti e che la somma degli esercizi coincida. Rende enforced
+// (in `npm test`) ciò che finora era solo nello script scripts/check-consistency.ts.
+describe('coerenza punteggi: ogni prova vale 30 (base di voto30 → voto10)', () => {
+  for (const v of VERIFICHE) {
+    it(`${v.id}: puntiTotali=30 e somma esercizi=30`, () => {
+      const sum = v.esercizi.reduce((s, e) => s + e.puntiTotali, 0);
+      expect(v.puntiTotali).toBe(30);
+      expect(sum).toBe(30);
+    });
+  }
+});

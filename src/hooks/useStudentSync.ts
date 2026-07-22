@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Categoria, EsitoFinale, EventoFocus, RispostaStudente } from '../types/domain';
 import { getOrCreateClientId } from '../lib/cloudSync';
-import { studentSaveSession, type StudentSavePayload } from '../lib/studentApi';
+import { studentSaveSession, type GradedResult, type StudentSavePayload } from '../lib/studentApi';
 
 export type SyncStatus = 'idle' | 'syncing' | 'synced' | 'offline' | 'error';
 
@@ -34,6 +34,8 @@ export function useStudentSync(opts: UseStudentSyncOptions) {
   const [status, setStatus] = useState<SyncStatus>('idle');
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
   const [lastError, setLastError] = useState<string | null>(null);
+  // Esito autorevole (voto + firma) restituito dal server alla consegna.
+  const [graded, setGraded] = useState<GradedResult | null>(null);
 
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const heartbeatTimer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -56,10 +58,6 @@ export function useStudentSync(opts: UseStudentSyncOptions) {
           answers: opts.answers,
           eventiFocus: opts.eventiFocus,
           state: opts.state,
-          esito: opts.esito,
-          voto30: opts.esito?.voto30,
-          signature: opts.esito?.signature,
-          signedAt: opts.esito?.signedAt,
           consegnatoAt: opts.esito?.consegnatoAt,
           motivoConsegna: opts.esito?.motivoConsegna,
           clientId: getOrCreateClientId(),
@@ -83,6 +81,7 @@ export function useStudentSync(opts: UseStudentSyncOptions) {
       setStatus('synced');
       setLastSyncAt(res.updatedAt ?? new Date().toISOString());
       setLastError(null);
+      if (res.graded) setGraded(res.graded);
     } else if (res.annullata) {
       stopped.current = true;
       setStatus('error');
@@ -134,5 +133,5 @@ export function useStudentSync(opts: UseStudentSyncOptions) {
     await doSave();
   };
 
-  return { status, lastSyncAt, lastError, flush };
+  return { status, lastSyncAt, lastError, graded, flush };
 }

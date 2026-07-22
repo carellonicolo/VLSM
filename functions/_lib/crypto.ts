@@ -1,6 +1,6 @@
 // Canonical JSON serialization (deterministic, sorted keys).
-// Used by both /api/sign and /api/verify to ensure identical HMAC input.
-// Kept identical to src/lib/pdfData.ts:canonicalJson.
+// Usato dalla firma autorevole lato server (_lib/grade.ts) e da /api/verify per
+// garantire lo stesso input HMAC. Kept identical to src/lib/pdfData.ts:canonicalJson.
 
 export function canonicalJson(value: unknown): string {
   if (value === null || typeof value !== 'object') return JSON.stringify(value);

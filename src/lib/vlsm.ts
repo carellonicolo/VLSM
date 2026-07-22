@@ -100,7 +100,10 @@ export function allocateVlsm(
   const sorted = [...requisiti].sort((a, b) => b.host - a.host);
   const result: AllocatedSubnet[] = [];
   let cursor = parent.ip >>> 0;
-  const parentEnd = (broadcastAddress(parent.ip, parent.prefix) + 1) >>> 0;
+  // endExclusive del blocco padre: per un blocco che termina a 255.255.255.255
+  // vale 2^32, NON rappresentabile in uint32. Teniamo i confini come numeri pieni
+  // (double, ampiamente entro la precisione) per evitare il wrap a 0 di `>>> 0`.
+  const parentEnd = broadcastAddress(parent.ip, parent.prefix) + 1;
   for (const req of sorted) {
     const prefix = minPrefixForHosts(req.host);
     const size = blockSize(prefix);
@@ -109,14 +112,14 @@ export function allocateVlsm(
       throw new Error(`Spazio insufficiente per ${req.nome}`);
     }
     result.push({ nome: req.nome, net: aligned >>> 0, prefix });
-    cursor = (aligned + size) >>> 0;
+    cursor = aligned + size;
   }
   return result;
 }
 
 function alignUp(n: number, size: number): number {
   const rem = n % size;
-  return rem === 0 ? n : (n + (size - rem)) >>> 0;
+  return rem === 0 ? n : n + (size - rem);
 }
 
 function largestAlignedPrefix(start: number, limitExclusive: number): number {
@@ -133,14 +136,15 @@ function largestAlignedPrefix(start: number, limitExclusive: number): number {
 
 export function findResidualBlocks(parent: Block, allocated: Block[]): Block[] {
   const sorted = [...allocated].sort((a, b) => a.net - b.net);
-  const parentEndExclusive = (broadcastAddress(parent.net, parent.prefix) + 1) >>> 0;
+  // Confine come numero pieno: per un padre che finisce a .255.255.255.255 vale 2^32.
+  const parentEndExclusive = broadcastAddress(parent.net, parent.prefix) + 1;
   let cursor = parent.net >>> 0;
   const out: Block[] = [];
   for (const a of sorted) {
     if (a.net > cursor) {
       pushGap(out, cursor, a.net);
     }
-    cursor = (a.net + blockSize(a.prefix)) >>> 0;
+    cursor = a.net + blockSize(a.prefix);
   }
   if (cursor < parentEndExclusive) {
     pushGap(out, cursor, parentEndExclusive);
@@ -149,17 +153,19 @@ export function findResidualBlocks(parent: Block, allocated: Block[]): Block[] {
 }
 
 function pushGap(out: Block[], start: number, endExclusive: number) {
-  let cursor = start >>> 0;
+  let cursor = start;
   while (cursor < endExclusive) {
     const prefix = largestAlignedPrefix(cursor, endExclusive);
-    out.push({ net: cursor, prefix });
-    cursor = (cursor + blockSize(prefix)) >>> 0;
+    out.push({ net: cursor >>> 0, prefix });
+    cursor = cursor + blockSize(prefix);
   }
 }
 
 export function blockContains(outer: Block, inner: Block): boolean {
-  const outerEnd = (outer.net + blockSize(outer.prefix)) >>> 0;
-  const innerEnd = (inner.net + blockSize(inner.prefix)) >>> 0;
+  // endExclusive come numero pieno: per /0 (o blocchi che arrivano a fine spazio)
+  // net + size può valere 2^32 e non deve wrappare a 0 con `>>> 0`.
+  const outerEnd = outer.net + blockSize(outer.prefix);
+  const innerEnd = inner.net + blockSize(inner.prefix);
   return inner.net >= outer.net && innerEnd <= outerEnd;
 }
 

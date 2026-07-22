@@ -2,6 +2,21 @@
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()
+  Strict-Transport-Security: max-age=31536000
+  Content-Security-Policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://*.nicolocarello.it https://unpkg.com; worker-src 'self' blob:; child-src 'self' blob:; manifest-src 'self'; form-action 'self'
+
+# NOTE CSP:
+#  - script-src include 'unsafe-eval' perché il motore PDF client-side
+#    (@react-pdf/renderer → yoga/WASM, pdfjs, jspdf) lo richiede; 'unsafe-inline'
+#    copre lo script inline di bootstrap del tema in index.html. Il vero
+#    irrobustimento è nelle altre direttive (object-src/frame-ancestors/base-uri
+#    e soprattutto connect-src, che limita l'esfiltrazione).
+#  - connect-src consente unpkg.com e *.nicolocarello.it perché la carello-shell
+#    (header unificato condiviso con le altre app) scarica le icone Lucide e la
+#    lista app dell'Hub. NON modificare la shell: allarga qui semmai gli origin.
+#  - style-src 'unsafe-inline' è necessario per gli stili inline di React e per i
+#    <style> nello shadow DOM della shell.
 
 # Il service worker non deve essere messo in cache dal browser/CDN,
 # così gli aggiornamenti (e i bump di versione) arrivano subito.
