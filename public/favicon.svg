@@ -1,1 +1,25 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="10" fill="#0b3d91"/><text x="50%" y="56%" text-anchor="middle" font-family="monospace" font-size="20" font-weight="700" fill="#fff">VLSM</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="VLSM Test">
+  <!-- Kit Carello: stessa "scatola" delle altre app (squircle rx=14, gradiente
+       arancio del brand, glifo bianco). Simbolo: una rete che si dirama da un
+       nodo in sottoreti — è esattamente ciò che insegna il VLSM (subnetting).
+       La vecchia icona era la scritta "VLSM": illeggibile alla dimensione reale
+       di una favicon (16px). Un simbolo si riconosce, quattro lettere no. -->
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff8a4c"/>
+      <stop offset="1" stop-color="#e0662b"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#g)"/>
+  <!-- Collegamenti: dalla rete madre giù verso le tre sottoreti -->
+  <g fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M32 22v10"/>
+    <path d="M15 32h34"/>
+    <path d="M15 32v10M32 32v10M49 32v10"/>
+  </g>
+  <!-- Nodi pieni: alla dimensione di una favicon i quadrati pieni si leggono -->
+  <rect x="25" y="8" width="14" height="14" rx="3" fill="#fff"/>
+  <rect x="8" y="42" width="14" height="14" rx="3" fill="#fff"/>
+  <rect x="25" y="42" width="14" height="14" rx="3" fill="#fff"/>
+  <rect x="42" y="42" width="14" height="14" rx="3" fill="#fff"/>
+</svg>

@@ -1,7 +1,24 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="VLSM Test">
-  <!-- Sfondo a tutto campo: sicuro per icone "maskable" (la crop mostra sempre il blu). -->
-  <rect width="512" height="512" fill="#0b3d91"/>
-  <rect x="48" y="48" width="416" height="416" rx="84" fill="#1e5fc4"/>
-  <text x="256" y="248" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="118" font-weight="800" fill="#ffffff">VLSM</text>
-  <text x="256" y="350" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="66" font-weight="700" fill="#cfe0ff">Test</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="VLSM Test">
+  <!-- Icona dell'app installata (PWA). Sfondo A TUTTO CAMPO senza angoli
+       arrotondati: è dichiarata "maskable", quindi il sistema operativo la
+       ritaglia con la forma che preferisce (cerchio, squircle...). Il glifo è
+       ridotto al 75% per restare dentro la zona sicura del ritaglio. -->
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff8a4c"/>
+      <stop offset="1" stop-color="#e0662b"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" fill="url(#g)"/>
+  <g transform="translate(32 32) scale(0.75) translate(-32 -32)">
+    <g fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M32 22v10"/>
+      <path d="M15 32h34"/>
+      <path d="M15 32v10M32 32v10M49 32v10"/>
+    </g>
+    <rect x="25" y="8" width="14" height="14" rx="3" fill="#fff"/>
+    <rect x="8" y="42" width="14" height="14" rx="3" fill="#fff"/>
+    <rect x="25" y="42" width="14" height="14" rx="3" fill="#fff"/>
+    <rect x="42" y="42" width="14" height="14" rx="3" fill="#fff"/>
+  </g>
 </svg>

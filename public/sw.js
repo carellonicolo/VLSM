@@ -7,7 +7,7 @@
  *    (i nomi file cambiano ad ogni deploy → nessun rischio di servire JS vecchio).
  *  - Bump di CACHE_VERSION ⇒ le cache vecchie vengono eliminate all'activate.
  */
-const CACHE_VERSION = 'vlsm-cache-v1';
+const CACHE_VERSION = 'vlsm-cache-v2';
 const APP_SHELL = ['/', '/favicon.svg', '/icon.svg', '/manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {
